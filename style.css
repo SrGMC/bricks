@@ -1,0 +1,205 @@
+/*
+    Author: Alvaro Galisteo - @Sr_GMC
+    Uses:
+        - segmented-control https://github.com/springload/segmented-control
+ */
+
+body {
+    overflow: hidden;
+
+    font-family: "Helvetica";
+
+    background-color: #202020;
+}
+.background {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 0;
+
+    background-color: #2b2b2b;
+}
+.navigationBar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 10;
+
+    height: 96px;
+
+    background-color: #202020;
+}
+.navigationBar .title {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+
+    margin: 8px 32px;
+
+    font-size: 36px;
+    font-weight: bold;
+
+    color: #fff;
+}
+
+.navigationBar .title .float.right {
+    position: absolute;
+    right: 0;
+    bottom: 3px;
+    /*float: right;*/
+
+    font-size: 20px;
+    font-weight: initial;
+
+    color: rgb(90, 200, 250);
+}
+
+.navigationBar .title .float.right span {
+    margin: 0 10px;
+}
+
+.navigationBar .title .float.right span:hover {
+    color: #32a0d2;
+}
+
+.navigationBar .title .float.left {
+    float: left;
+}
+
+.content {
+    position: fixed;
+    top: 96px;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 9;
+
+    margin: 10px 32px;
+
+    color: #fff;
+    background-color: #2b2b2b;
+}
+
+.content .history {
+    position: absolute;
+    right: 0;
+    left: 320px;
+
+    overflow-y: auto;
+
+    font-family: Courier New, Courier, Lucida Sans Typewriter, Lucida Typewriter, monospace;
+
+    color: #4cd964;
+}
+
+.content .sidebar {
+    position: absolute;
+    left: -14px;
+
+    height: 300px;
+    width: 320px;
+    margin-bottom: 60px;
+    overflow-y: auto;
+
+    font-family: Courier New, Courier, Lucida Sans Typewriter, Lucida Typewriter, monospace;
+    font-size: 14px;
+
+    white-space: nowrap;
+
+    color: #fff;
+    border-right-color: #5a5a5c ;
+}
+
+.segmented-control {
+    display: table;
+    width: 310px;
+    padding: 0;
+    margin: 16px 0;
+
+    font-size: 16px;
+}
+
+.segmented-control__item {
+    display: table-cell;
+    padding: 0;
+    margin: 0;
+
+    list-style-type: none;
+}
+
+.segmented-control__input {
+    position: absolute;
+
+    visibility: hidden;
+}
+
+.segmented-control__label {
+    display: block;
+    padding: 5px .25em;
+    margin: 0 -1px -1px 0; /* -1px margin removes double-thickness borders between items */
+
+    font-family: sans-serif;
+
+    cursor: pointer;
+    text-align: center;
+
+    border: 1px solid #ddd;
+}
+
+.segmented-control__label.first {
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+}
+
+.segmented-control__label.last {
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+}
+
+.segmented-control__label:hover {
+    color: #000;
+    background: #fafafa;
+}
+
+.segmented-control__input:checked + .segmented-control__label {
+    color: #333;
+    background: #eee;
+}
+
+.content .output {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+
+    height: 150px;
+    padding: 10px 30px;
+
+    font-family: Courier New, Courier, Lucida Sans Typewriter, Lucida Typewriter, monospace;
+
+    background-color: #202020;
+}
+
+.content .output .title {
+    margin-bottom: 2px;
+
+    font-family: "Helvetica";
+    font-size: 20px;
+    font-weight: bold;
+
+    color: #fff;
+    background-color: #202020;
+}
+
+.content .output .output {
+    position: relative;
+
+    height: 80%;
+    width: 100%;
+    padding: 0;
+    overflow-y: auto;
+}
