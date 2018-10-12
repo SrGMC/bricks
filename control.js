@@ -6,9 +6,10 @@
 const MAX_5BIT = Math.pow(2, 5) - 1;
 const MAX_16BIT = Math.pow(2, 15) - 1;
 const MIN_16BIT = -Math.pow(2, 15);
+const registerid = [["$zero", "$0"], ["$at", "$1"], ["$v0", "$2"], ["$v1", "$3"], ["$a0", "$4"], ["$a1", "$5"], ["$a2", "$6"], ["$a3", "$7"], ["$t0", "$8"], ["$t1", "$9"], ["$t2", "$10"], ["$t3", "$11"], ["$t4", "$12"], ["$t5", "$13"], ["$t6", "$14"], ["$t7", "$15"], ["$s0", "$16"], ["$s1", "$17"], ["$s2", "$18"], ["$s3", "$19"], ["$s4", "$20"], ["$s5", "$21"], ["$s6", "$22"], ["$s7", "$23"], ["$t8", "$24"], ["$t9", "$25"], ["$k0", "$26"], ["$k1", "$27"], ["$gp", "$28"], ["$sp", "$29"], ["$fp", "$30"], ["$ra", "$31"]];
 
 // Instruction groups
-var groups = [
+const groups = [
         //G1 : ins rs1 rs2 etiq
     ["beq", "bge", "bgeu", "bgt", "bgtu", "ble", "bleu", "blt", "bltu", "bne"],
         //G2 : ins rd rs1 inm16
@@ -54,10 +55,23 @@ function labelExists(label){
 //Get the starting line of the code
 function getCodeStart(code){
     var index = 0;
-    while(code[index].indexOf(".text") === -1 && index > code.length){
-        index++;
+    for (var i = 0; i < code.length; i++) {
+        if(code[i].indexOf(".text") !== -1){
+            index = i;
+            break;
+        }
     }
-    return (index > code.length) ? 0 : index;
+    return index;
+}
+
+//Checks that the string is ASCII
+function isASCII(string){
+    for (var i = 0; i < string.length; i++) {
+        if(string.charCodeAt(i) >= 256){
+            return false;
+        }
+    }
+    return true;
 }
 
 //Parse all the labels
@@ -65,9 +79,12 @@ function parseLabels(code){
     //.text
 
     var PCindex = PC;
+    var GPindex = register[getRegisterId("$gp")];
     for (var i = getCodeStart(code); i < code.length; i++) {
-        //If it's a comment, skip
-        if(code[i].indexOf("#") === 0){
+        console.log("Evaluating " + code[i] + " with addr 0x" + PCindex);
+        //If it's a comment or .text, skip
+        if(code[i].indexOf("#") === 0 || code[i].indexOf(".text") !== -1 || code[i] === " " || code[i] === ""){
+            console.log("Continuing");
             continue;
         }
 
@@ -92,14 +109,80 @@ function parseLabels(code){
         }
 
         //Otherwise, store label and its address
+        var split = code[i].split(" ");
         label = label.replace(":", "");
         labels[label] = PCindex;
-        PCindex = intToHex(hexToInt(PCindex) + 4);
+        //If label is alone, the next line has the same address as the label
+        if(split.length === 1){
+            PCindex = intToHex(hexToInt(PCindex));
+        } else {
+            PCindex = intToHex(hexToInt(PCindex) + 4);
+        }
     }
 
     //TODO: parse .data labels
-
+    for (var i = 0; i < getCodeStart(code); i++) {
+        if(code[i].indexOf("#") === 0 || code[i].indexOf(".data") !== -1 || code[i] === " " || code[i] === ""){
+            console.log("Continuing");
+            continue;
+        }
+    }
     return true;
+}
+
+//Parse .data instruction
+function parseData(instruction){
+    var success = false;
+    var i = 0;
+
+    //Ignore labels
+    var match = instruction.match(/(\w+):/g);
+    if(match !== null){
+        instruction = instruction.replace(match[0], "");
+    }
+
+    //Ignore and trim empty spaces
+    instruction = instruction.replace(/\s{2,}/g, "");
+    if(instruction === "" || instruction === " " || instruction === ".data"){
+        return true;
+    }
+
+    //const directives = [".asciiz", ".ascii", ".byte", ".space", ".globl", ".half", ".word"];
+    if(instruction.indexOf(".asciiz") !== -1){
+        match = instruction.match(/\".+\"/g)[0].replace('"', '');
+        if(!isASCII(match)){
+            return false;
+        }
+        for (i = 0; i < match.length-1; i++) {
+            memory[binToHex(register[28])] = intToBin(match.charCodeAt(i)).substring(24);
+            register[28] = intToBin(binToInt(register[28]) + 1);
+        }
+        memory[binToHex(register[28])] = "00000000";
+        register[28] = intToBin(binToInt(register[28]) + 1);
+        return true;
+    }
+    if(instruction.indexOf(".ascii") !== -1){
+        match = instruction.match(/\".+\"/g)[0].replace('"', '');
+        if(!isASCII(match)){
+            return false;
+        }
+        for (i = 0; i < match.length-1; i++) {
+            memory[binToHex(register[28])] = intToBin(match.charCodeAt(i)).substring(24);
+            register[28] = intToBin(binToInt(register[28]) + 1);
+        }
+        return true;
+    }
+    if(instruction.indexOf(".space") !== -1){
+        var n = parseInt(instruction.replace(".space ", ""));
+        console.log(n);
+        for (i = 0; i < n; i++) {
+            memory[binToHex(register[28])] = "000000";
+            register[28] = intToBin(binToInt(register[28]) + 1);
+        }
+        return true;
+    }
+
+    return false;
 }
 
 //Parse .text instruction
@@ -129,7 +212,6 @@ function parseText(instruction){
     //Strip empty spaces and commas
     instruction = instruction.replace(",", "");
     var split = instruction.split(" ").filter(function (el) { return el !== ""; });
-    console.log(split);
 
     //Check if instructions are valid. Then store them in memory. INT, HEX and LABELS are stored in binary
     //G1 ins rs1 rs2 etiq
@@ -244,9 +326,10 @@ function parseText(instruction){
 
     //Add instruction into memory
     if(success){
+        var result = [true, PC];
         memory[PC] = split;
         PC = intToHex(hexToInt(PC) + 4);
-        return true;
+        return result;
     } else {
         return false;
     }
@@ -261,37 +344,10 @@ function decode(instruction){
 
 //Register index
 function getRegisterId(register){
-    if(register === "$zero" || register === "$0"){ return 0; }
-    else if(register === "$at" || register === "$1"){ return 1; }
-    else if(register === "$v0" || register === "$2"){ return 2; }
-    else if(register === "$v1" || register === "$3"){ return 3; }
-    else if(register === "$a0" || register === "$4"){ return 4; }
-    else if(register === "$a1" || register === "$5"){ return 5; }
-    else if(register === "$a2" || register === "$6"){ return 6; }
-    else if(register === "$a3" || register === "$7"){ return 7; }
-    else if(register === "$t0" || register === "$8"){ return 8; }
-    else if(register === "$t1" || register === "$9"){ return 9; }
-    else if(register === "$t2" || register === "$10"){ return 10; }
-    else if(register === "$t3" || register === "$11"){ return 11; }
-    else if(register === "$t4" || register === "$12"){ return 12; }
-    else if(register === "$t5" || register === "$13"){ return 13; }
-    else if(register === "$t6" || register === "$14"){ return 14; }
-    else if(register === "$t7" || register === "$15"){ return 15; }
-    else if(register === "$s0" || register === "$16"){ return 16; }
-    else if(register === "$s1" || register === "$17"){ return 17; }
-    else if(register === "$s2" || register === "$18"){ return 18; }
-    else if(register === "$s3" || register === "$19"){ return 19; }
-    else if(register === "$s4" || register === "$20"){ return 20; }
-    else if(register === "$s5" || register === "$21"){ return 21; }
-    else if(register === "$s6" || register === "$22"){ return 22; }
-    else if(register === "$s7" || register === "$23"){ return 23; }
-    else if(register === "$t8" || register === "$24"){ return 24; }
-    else if(register === "$t9" || register === "$25"){ return 25; }
-    else if(register === "$k0" || register === "$26"){ return 26; }
-    else if(register === "$k1" || register === "$27"){ return 27; }
-    else if(register === "$gp" || register === "$28"){ return 28; }
-    else if(register === "$sp" || register === "$29"){ return 29; }
-    else if(register === "$fp" || register === "$30"){ return 30; }
-    else if(register === "$ra" || register === "$31"){ return 31; }
-    else { return -1; }
+    for (var i = 0; i < registerid.length; i++) {
+        if(registerid[i][0] === register || registerid[i][1] === register){
+            return i;
+        }
+    }
+    return -1;
 }

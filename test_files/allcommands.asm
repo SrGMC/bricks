@@ -1,6 +1,5 @@
 # Test
-main:
-beq $t0 $t0 main #Test
+main: beq $t0 $t0 main #Test
 bge $t0 $t0 main
 bgeu $t0 $t0 main
 bgt $t0 $t0 main
@@ -13,7 +12,8 @@ bne $t0 $t0 main
 addi $t0 $t0 16
 addiu $t0 $t0 16
 ori $t0 $t0 16
-xori $t0 $t0 16
+run: xori $t0 $t0 16
+run2:
 andi $t0 $t0 16
 slti $t0 $t0 16
 sltui $t0 $t0 16

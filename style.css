@@ -84,43 +84,93 @@ body {
     background-color: #2b2b2b;
 }
 
+.content .control {
+    display: inline-block;
+}
+
+.content #history_main {
+    overflow-y: hidden;
+}
+
 .content .history {
     position: absolute;
     right: 0;
     left: 320px;
 
-    overflow-y: auto;
-
     font-family: Courier New, Courier, Lucida Sans Typewriter, Lucida Typewriter, monospace;
+    font-size: 15px;
+
+    text-align: center;
 
     color: #4cd964;
+}
+
+.content #history {
+    overflow-y: auto;
+
+    text-align: left;
+}
+
+.content .num {
+    display: inline-block;
+    width: 60px;
+    margin-right: 5px;
+
+    font-size: 14px;
+    font-weight: bold;
+
+    text-align: right;
+
+    color: #63a46c;
+}
+
+.content .code {
+    display: inline-block;
+    padding: 1px;
+    margin: 3px;
+}
+
+.content .code.run {
+    background-color: #403f4c;
+}
+
+
+.content #sidebar_main {
+    overflow-y: hidden;
 }
 
 .content .sidebar {
     position: absolute;
     left: -14px;
 
-    height: 300px;
     width: 320px;
     margin-bottom: 60px;
-    overflow-y: auto;
 
     font-family: Courier New, Courier, Lucida Sans Typewriter, Lucida Typewriter, monospace;
     font-size: 14px;
 
+    text-align: center;
     white-space: nowrap;
 
     color: #fff;
     border-right-color: #5a5a5c ;
 }
 
+.content #sidebar {
+    overflow-y: auto;
+
+    text-align: left;
+}
+
 .segmented-control {
     display: table;
-    width: 310px;
+    width: 300px;
     padding: 0;
     margin: 16px 0;
 
     font-size: 16px;
+
+    color: #fff;
 }
 
 .segmented-control__item {

@@ -21,7 +21,7 @@ var HI = "00000000";
 var LO = "00000000";
 
 var memory = {};
-var register = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+var register = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,hexToBin("10000000"),hexToBin("7fffefff"),hexToBin("7fffefff"),0];
 var labels = {};
 var textEnd = PC;
 
@@ -32,7 +32,7 @@ const MIN_SINT = -Math.pow(2, 31);
 
 //File data are stored here
 var instructions = [];
-var index = 0; //Determines the next index to be used to store file data
+var index = 0; //TODO: Determines the next index to be used to store file data
 
 //Web
 display();
@@ -86,22 +86,25 @@ function display(){
     var height = "innerHeight" in window ? window.innerHeight : document.documentElement.offsetHeight;
     var navh = document.getElementById('nav').offsetHeight;
     var inputh = document.getElementById('outputdiv').offsetHeight;
+    var controlh = document.getElementById('control').offsetHeight;
     document.getElementById('sidebar_main').style.height = (height - (navh + inputh) - 30) + "px";
-    document.getElementById('history').style.height = (height - (navh + inputh) - 30) + "px";
+    document.getElementById('history_main').style.height = (height - (navh + inputh) - 30) + "px";
+    document.getElementById('sidebar').style.height = (height - (navh + inputh + controlh) - 30) + "px";
+    document.getElementById('history').style.height = (height - (navh + inputh + controlh) - 30) + "px";
     updateSidebar();
 }
 
 function clearCode(){
-    document.getElementById("history").innerHTML = '<i>Welcome to Bricks!, an Open Source MIPS32 simulator.</i><br><br><span style="font-family:helvetica;">Open</span>  &nbsp;Press "Open" to open a new program.<br><img src="assets/run_tutorial.png" height="18px">  &nbsp;&nbsp; Press "Run" to run the whole program.<br><img src="assets/step_tutorial.png" height="18px">  &nbsp;&nbsp; Press "Step" to run the program line by line.<br><img src="assets/clear_tutorial.png" height="18px">  &nbsp;&nbsp; Press "Clear" to clear the registers.<br><img src="assets/clear_code_tutorial.png" height="20px">  &nbsp;&nbsp; Press "Reset" to clear the opened code.<br>';
+    document.getElementById("history").innerHTML = '<i>Welcome to Bricks!, an Open Source MIPS32 simulator.</i><br><br><span style="font-family:helvetica;">Open</span>  &nbsp;Press "Open" to open a new program.<br><img src="assets/run_tutorial.png" height="18px">  &nbsp;&nbsp; Press "Run" to run the whole program.<br><img src="assets/step_tutorial.png" height="18px">  &nbsp;&nbsp; Press "Step" to run the program line by line.<br><img src="assets/clear_tutorial.png" height="18px">  &nbsp;&nbsp; Press "Clear" to clear the registers.<br><img src="assets/clear_code_tutorial.png" height="20px">  &nbsp;&nbsp; Press "Reset" to clear the opened code.<br><br><span style="color: rgb(255, 204, 0);">Labels that are alone with spaces in front of them are currently not supported.</span><br>';
     document.getElementById("output").innerHTML = "";
     instructions = [];
     index = 0;
+    labels = {};
+    memory = {};
 }
 
 function clearRegisters(){
-    for (var i = 0; i < register.length; i++) {
-        register[i] = 0;
-    }
+    register = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,hexToBin("10000000"),hexToBin("7fffefff"),hexToBin("7fffefff"),0];
     PC = "00000000";
     RI = "";
     HI = "00000000";
@@ -176,15 +179,6 @@ if (window.File && window.FileReader && window.FileList && window.Blob) {
 
 //Handle the file upload and opening
 function handleFileSelect(evt) {
-    //Check if there's already a file opened
-    var confirmation;
-    if(instructions.length === 0){
-        document.getElementById("history").innerHTML = "";
-    }
-    if(instructions.length >= 1){
-        confirmation = confirm("Files are already opened. Do you wish to overwrite them?");
-    }
-
     //Uploaded files list
     var files = evt.target.files; // FileList object
 
@@ -198,15 +192,15 @@ function handleFileSelect(evt) {
 
     //Get file data
     reader.onload = function(event) {
-        //Clear the code window if the user overwrites
-        if(confirmation){
-            instructions = [];
-            index = 0;
-            document.getElementById("history").innerHTML = "";
-        }
+        //Clear code and memory
+        instructions = [];
+        index = 0;
+        labels = {};
+        memory = {};
+        document.getElementById("history").innerHTML = "";
 
         //Store the data as an array, in lowercase
-        instructions[index] = event.target.result.toLowerCase().split(/(?:\r\n|\r|\n)/g);
+        instructions[index] = event.target.result.split(/(?:\r\n|\r|\n)/g);
         //Parse and evaluate instructions
         parseFile();
         index++;
@@ -220,11 +214,13 @@ function handleFileSelect(evt) {
 function parseFile(){
     //Store PC temporarily. This is used if another file is loaded with an already loaded one
     var temp = PC;
+    //var temp2 = register[28]; //$gp is not restored
 
     //Parse all the labels
     console.log("Parsing labels");
     var control = parseLabels(instructions[index]);
     console.log(control ? " passed" : " error");
+    console.log("");
 
     //Display the user if there's an error with a label
     if(!control[0] && control[1] === 0){
@@ -233,11 +229,12 @@ function parseFile(){
         document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + control[2]) + "</strong>: " + instructions[index][control[2]] + ". Label already exists. <br>";
     }
 
-    //Evaluate all .text instructions
-    for (var i = getCodeStart(instructions[index]); i < instructions[index].length && control; i++) {
-        console.log("Evaluating instruction " + instructions[index][i]);
-        if(parseText(instructions[index][i])){
-            document.getElementById("history").innerHTML += instructions[index][i] + "<br>";
+    //TODO: Evaluate all .data instructions
+    for (var i = 0; i < getCodeStart(instructions[index]) && control; i++) {
+        console.log("Evaluating data instruction " + instructions[index][i]);
+        var status = parseData(instructions[index][i]);
+        if(status){
+            document.getElementById("history").innerHTML += '<span class="num">' + (i+1) + '.</span><span class="code">' + instructions[index][i].replace(" ", "&nbsp;") + "</span><br>";
             console.log(" passed");
         } else {
             console.log(" error");
@@ -245,7 +242,23 @@ function parseFile(){
             break;
         }
     }
-    //TODO: Evaluate .data instructions
+
+    console.log("");
+
+    //Evaluate all .text instructions
+    for (var i = getCodeStart(instructions[index]); i < instructions[index].length && control; i++) {
+        console.log("Evaluating text instruction " + instructions[index][i]);
+        var status = parseText(instructions[index][i]);
+        if(status[0] || status){
+            document.getElementById("history").innerHTML += '<span class="num">' + (i+1) + '.</span><span class="code" ' + ((status[0]) ? 'id="l' + status[1] + '"' : "") + '>' + instructions[index][i].replace(" ", "&nbsp;") + "</span><br>";
+            console.log(" passed");
+        } else {
+            console.log(" error");
+            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + i) + "</strong>: " + instructions[index][i] + " is not a valid instruction. </span><br>";
+            break;
+        }
+    }
+    document.getElementById("history").innerHTML += "\n";
 
     //Restore everything and store the end address of the code
     textEnd = intToHex(hexToInt(PC) - 4);
@@ -255,7 +268,7 @@ function parseFile(){
 //Run
 function run() {
     //Calculate the maximum instructions we can run
-    var max = Math.min(hexToInt(10000000, true), hexToInt(textEnd, true));
+    var max = Math.min(hexToInt("0fffffff", true), hexToInt(textEnd, true));
 
     //Run each of them
     for (var i = hexToInt(PC); i < max; i += 4) {
@@ -267,7 +280,7 @@ function run() {
 //Step
 function step() {
     //Calculate the maximum instructions we can run
-    var max = Math.min(hexToInt(10000000, true), hexToInt(textEnd, true));
+    var max = Math.min(hexToInt("0fffffff", true), hexToInt(textEnd, true));
 
     //Run one if we have not reached the maximum
     if(hexToInt(PC) <= max){
