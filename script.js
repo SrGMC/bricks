@@ -332,7 +332,7 @@ function run() {
     document.getElementById("l" + last).classList.remove("run");
 
     //Run each of them
-    for (var i = hexToInt(PC); i < max; i += 4) {
+    for (var i = hexToInt(PC); i <= max; i += 4) {
         decode(memory[PC]);
         PC = intToHex(hexToInt(PC) + 4);
     }
