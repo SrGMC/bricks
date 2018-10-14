@@ -24,6 +24,9 @@ var memory = {};
 var register = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,hexToBin("10000000"),hexToBin("7fffefff"),hexToBin("7fffefff"),0];
 var labels = {};
 var textEnd = PC;
+var dataEnd = PC;
+
+var last = PC;
 
 const MAX_UINT = Math.pow(2, 32) - 1;
 const MAX_SINT = Math.pow(2, 31) - 1;
@@ -31,8 +34,13 @@ const MIN_UINT = 0;
 const MIN_SINT = -Math.pow(2, 31);
 
 //File data are stored here
-var instructions = [];
+var instructions = "";
 var index = 0; //TODO: Determines the next index to be used to store file data
+var text = document.getElementById('history').innerHTML;
+
+//Settings array
+//show whole code,
+var settings = [false];
 
 //Web
 display();
@@ -95,7 +103,7 @@ function display(){
 }
 
 function clearCode(){
-    document.getElementById("history").innerHTML = '<i>Welcome to Bricks!, an Open Source MIPS32 simulator.</i><br><br><span style="font-family:helvetica;">Open</span>  &nbsp;Press "Open" to open a new program.<br><img src="assets/run_tutorial.png" height="18px">  &nbsp;&nbsp; Press "Run" to run the whole program.<br><img src="assets/step_tutorial.png" height="18px">  &nbsp;&nbsp; Press "Step" to run the program line by line.<br><img src="assets/clear_tutorial.png" height="18px">  &nbsp;&nbsp; Press "Clear" to clear the registers.<br><img src="assets/clear_code_tutorial.png" height="20px">  &nbsp;&nbsp; Press "Reset" to clear the opened code.<br><br><span style="color: rgb(255, 204, 0);">Labels that are alone with spaces in front of them are currently not supported.</span><br>';
+    document.getElementById("history").innerHTML = '<i>Welcome to Bricks!, an Open Source MIPS32 simulator.</i><br><br><span style="font-family:helvetica;">Open</span>  &nbsp;Press "Open" to open a new program.<br><img src="assets/run_tutorial.png" height="18px">  &nbsp;&nbsp; Press "Run" to run the whole program.<br><img src="assets/step_tutorial.png" height="18px">  &nbsp;&nbsp; Press "Step" to run the program line by line.<br><img src="assets/clear_tutorial.png" height="18px">  &nbsp;&nbsp; Press "Clear" to clear the registers.<br><img src="assets/clear_code_tutorial.png" height="20px">  &nbsp;&nbsp; Press "Reset" to clear the opened code.<br><br><br>';
     document.getElementById("output").innerHTML = "";
     instructions = [];
     index = 0;
@@ -110,6 +118,47 @@ function clearRegisters(){
     HI = "00000000";
     LO = "00000000";
     textEnd = PC;
+}
+
+function showText(){
+    document.getElementById("history").innerHTML = text;
+}
+
+function dataHex(pos){
+    var result = binToHex(memory[intToHex(pos)]);
+    return (result.indexOf("NaN") === -1) ? result.substring(6) : "&nbsp;&nbsp;";
+}
+
+function binToASCII(bin){
+    if(pad(bin, 32) === pad("0", 32)){
+        return ".";
+    }
+    return String.fromCharCode(binToInt(pad(bin, 32)));
+}
+
+function showData(){
+    document.getElementById("history").innerHTML = "";
+    var offset = hexToInt("10000000");
+    console.log(hexToInt(dataEnd) - offset);
+    for (var i = 0; i < hexToInt(dataEnd)-offset; i += 8) {
+        document.getElementById("history").innerHTML += "[" + intToHex(offset+i) + "]<br>&nbsp;&nbsp;" +
+                                                        dataHex(offset+i) +
+                                                        dataHex(offset+i+1) +
+                                                        dataHex(offset+i+2) +
+                                                        dataHex(offset+i+3) + "&nbsp;" +
+                                                        dataHex(offset+i+4) +
+                                                        dataHex(offset+i+5) +
+                                                        dataHex(offset+i+6) +
+                                                        dataHex(offset+i+7) + "&nbsp;&nbsp;";
+        document.getElementById("history").innerHTML += binToASCII(memory[intToHex(offset+i)]) + "&nbsp;" +
+                                                        ((dataHex(offset+i+1) === "&nbsp;&nbsp;") ? "." : binToASCII(memory[intToHex(offset+i+1)])) + "&nbsp;" +
+                                                        ((dataHex(offset+i+2) === "&nbsp;&nbsp;") ? "." : binToASCII(memory[intToHex(offset+i+2)])) + "&nbsp;" +
+                                                        ((dataHex(offset+i+3) === "&nbsp;&nbsp;") ? "." : binToASCII(memory[intToHex(offset+i+3)])) + "&nbsp;" +
+                                                        ((dataHex(offset+i+4) === "&nbsp;&nbsp;") ? "." : binToASCII(memory[intToHex(offset+i+4)])) + "&nbsp;" +
+                                                        ((dataHex(offset+i+5) === "&nbsp;&nbsp;") ? "." : binToASCII(memory[intToHex(offset+i+5)])) + "&nbsp;" +
+                                                        ((dataHex(offset+i+6) === "&nbsp;&nbsp;") ? "." : binToASCII(memory[intToHex(offset+i+6)])) + "&nbsp;" +
+                                                        ((dataHex(offset+i+7) === "&nbsp;&nbsp;") ? "." : binToASCII(memory[intToHex(offset+i+7)])) + "<br>";
+    }
 }
 
 /*
@@ -200,7 +249,7 @@ function handleFileSelect(evt) {
         document.getElementById("history").innerHTML = "";
 
         //Store the data as an array, in lowercase
-        instructions[index] = event.target.result.split(/(?:\r\n|\r|\n)/g);
+        instructions = event.target.result.split(/(?:\r\n|\r|\n)/g);
         //Parse and evaluate instructions
         parseFile();
         index++;
@@ -218,27 +267,31 @@ function parseFile(){
 
     //Parse all the labels
     console.log("Parsing labels");
-    var control = parseLabels(instructions[index]);
-    console.log(control ? " passed" : " error");
+    var control = parseLabels(instructions);
     console.log("");
 
     //Display the user if there's an error with a label
     if(!control[0] && control[1] === 0){
-        document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + control[2]) + "</strong>: " + instructions[index][control[2]] + " is using a reserved word as label. </span><br>";
+        document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + control[2]) + "</strong>: " + instructions[control[2]] + " is using a reserved word as label. </span><br>";
     } else if(!control[0] && control[1] === 1){
-        document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + control[2]) + "</strong>: " + instructions[index][control[2]] + ". Label already exists. <br>";
+        document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + control[2]) + "</strong>: " + instructions[control[2]] + ". Label already exists. <br>";
     }
 
-    //TODO: Evaluate all .data instructions
-    for (var i = 0; i < getCodeStart(instructions[index]) && control; i++) {
-        console.log("Evaluating data instruction " + instructions[index][i]);
-        var status = parseData(instructions[index][i]);
-        if(status){
-            document.getElementById("history").innerHTML += '<span class="num">' + (i+1) + '.</span><span class="code">' + instructions[index][i].replace(" ", "&nbsp;") + "</span><br>";
-            console.log(" passed");
-        } else {
-            console.log(" error");
-            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + i) + "</strong>: " + instructions[index][i] + " is not a valid instruction. </span><br>";
+    //Evaluate all .data instructions
+    console.log("Evaluating .data instructions");
+    for (var i = 0; i < getCodeStart(instructions) && control; i++) {
+        var status = parseData(instructions[i]);
+        if(status === 0){
+            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + i) + "</strong>: " + instructions[i] + " is not a valid instruction. </span><br>";
+            control = false;
+            break;
+        } else if(status === 2){
+            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + i) + "</strong>: " + instructions[i] + " is using a reserved word as label. </span><br>";
+            control = false;
+            break;
+        } else if(status === 3){
+            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + i) + "</strong>: " + instructions[i] + ". Label already exists. </span><br>";
+            control = false;
             break;
         }
     }
@@ -246,15 +299,18 @@ function parseFile(){
     console.log("");
 
     //Evaluate all .text instructions
-    for (var i = getCodeStart(instructions[index]); i < instructions[index].length && control; i++) {
-        console.log("Evaluating text instruction " + instructions[index][i]);
-        var status = parseText(instructions[index][i]);
+    console.log("Evaluating .text instructions");
+    var index = 1;
+    for (var i = getCodeStart(instructions) + ((settings[0] === true) ? 0 : 1); i < instructions.length && control; i++) {
+        var status = parseText(instructions[i]);
         if(status[0] || status){
-            document.getElementById("history").innerHTML += '<span class="num">' + (i+1) + '.</span><span class="code" ' + ((status[0]) ? 'id="l' + status[1] + '"' : "") + '>' + instructions[index][i].replace(" ", "&nbsp;") + "</span><br>";
-            console.log(" passed");
+            if(instructions[i].replace(/(\w+):/g, "").replace(/\s{2,}/g, "") === "" && !settings[0]){
+                continue;
+            }
+            document.getElementById("history").innerHTML += '<span class="num">' + index + '.</span><span class="code" ' + ((status[0]) ? 'id="l' + status[1] + '"' : "") + '>' + ((settings[0] === true) ? instructions[i].replace(" ", "&nbsp;") : instructions[i].replace(/(\w+):/g, "")) + "</span><br>";
+            index++;
         } else {
-            console.log(" error");
-            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + i) + "</strong>: " + instructions[index][i] + " is not a valid instruction. </span><br>";
+            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + i) + "</strong>: " + instructions[i] + " is not a valid instruction. </span><br>";
             break;
         }
     }
@@ -262,13 +318,18 @@ function parseFile(){
 
     //Restore everything and store the end address of the code
     textEnd = intToHex(hexToInt(PC) - 4);
+    dataEnd = binToHex(register[28]);
     PC = temp;
+    text = document.getElementById("history").innerHTML;
 }
 
 //Run
 function run() {
     //Calculate the maximum instructions we can run
     var max = Math.min(hexToInt("0fffffff", true), hexToInt(textEnd, true));
+
+    //Remove the run class
+    document.getElementById("l" + last).classList.remove("run");
 
     //Run each of them
     for (var i = hexToInt(PC); i < max; i += 4) {
@@ -284,9 +345,16 @@ function step() {
 
     //Run one if we have not reached the maximum
     if(hexToInt(PC) <= max){
+
+        //Highlight currently running instruction
+        document.getElementById("l" + last).classList.remove("run");
+        document.getElementById("l" + PC).classList.add("run");
+        last = PC;
+
         decode(memory[PC]);
         PC = intToHex(hexToInt(PC) + 4);
     } else {
+        document.getElementById("l" + last).classList.remove("run");
         document.getElementById("output").innerHTML += '<span style="color: rgb(255, 204, 0);"><strong>Warning</strong>: Reached end of code. Stopping. <br>';
     }
 }

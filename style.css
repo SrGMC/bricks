@@ -253,3 +253,41 @@ body {
     padding: 0;
     overflow-y: auto;
 }
+
+#resolution {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 11;
+
+    display: none;
+
+    text-align: center;
+
+    color: #fff;
+    background-color: #202020;
+
+    align-items: center;
+    justify-content: center;
+}
+
+#resolution i {
+    font-size: 14px;
+}
+
+#resolution img {
+    width: 128px;
+
+    border-radius: 17px;
+    -webkit-box-shadow: 0 0 20px 0 rgba(255,255,255,.5);
+       -moz-box-shadow: 0 0 20px 0 rgba(255,255,255,.5);
+            box-shadow: 0 0 20px 0 rgba(255,255,255,.5);
+}
+
+@media only screen and (max-width: 714px) {
+    #resolution {
+        display: flex;
+    }
+}

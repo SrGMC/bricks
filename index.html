@@ -11,6 +11,14 @@
 </head>
 <body>
     <div class="background"></div>
+    <div id="resolution">
+        <div>
+            <img src="assets/bricks.png" width="128px">
+            <h1>Bricks is not available in this resolution</h1>
+            Please use a device with bigger resolution or try rotate your device<br>
+            <i>Minimum width: 700px</i>
+        </div>
+    </div>
     <div class="navigationBar" id="nav">
         <div class="title">
             <div class="float left">Bricks</div>
@@ -48,11 +56,11 @@
             <div class="control">
                 <ul class="segmented-control">
                     <li class="segmented-control__item">
-                        <input class="segmented-control__input" type="radio" value="1" name="code" id="text" checked>
+                        <input class="segmented-control__input" onclick="showText()" type="radio" value="1" name="code" id="text" checked>
                         <label class="segmented-control__label first" for="text">Text</label>
                     </li>
                     <li class="segmented-control__item">
-                        <input class="segmented-control__input" type="radio" value="2" name="code" id="data">
+                        <input class="segmented-control__input" onclick="showData()" type="radio" value="2" name="code" id="data">
                         <label class="segmented-control__label last" for="data">Data</label>
                     </li>
                 </ul>
@@ -66,7 +74,6 @@
                 <img src="assets/clear_code_tutorial.png" height="20px"> &nbsp;&nbsp; Press "Reset" to clear the opened code.<br><br>
                 <span style="color: rgb(255, 204, 0);">Currently unsuported: <br>
                  - Spaces in front of labels.<br>
-                 - Directives (except .text).<br>
                  - Floating Point operations.<br></span><br>
             </div>
         </div>

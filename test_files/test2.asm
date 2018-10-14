@@ -1,8 +1,5 @@
 .data
-    .asciiz "123"
-    .space 4
+    var2: .asciiz "Test text"
 .text
-main:
-    li $t0 0xFFFFFFFF
-
-    main2: jr $ra
+main: li $t0 0xFFFFFFFF
+    jr $ra

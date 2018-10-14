@@ -6,6 +6,8 @@
 const MAX_5BIT = Math.pow(2, 5) - 1;
 const MAX_16BIT = Math.pow(2, 15) - 1;
 const MIN_16BIT = -Math.pow(2, 15);
+const MAX_BYTE = Math.pow(2, 7) - 1;
+const MIN_BYTE = -Math.pow(2, 7);
 const registerid = [["$zero", "$0"], ["$at", "$1"], ["$v0", "$2"], ["$v1", "$3"], ["$a0", "$4"], ["$a1", "$5"], ["$a2", "$6"], ["$a3", "$7"], ["$t0", "$8"], ["$t1", "$9"], ["$t2", "$10"], ["$t3", "$11"], ["$t4", "$12"], ["$t5", "$13"], ["$t6", "$14"], ["$t7", "$15"], ["$s0", "$16"], ["$s1", "$17"], ["$s2", "$18"], ["$s3", "$19"], ["$s4", "$20"], ["$s5", "$21"], ["$s6", "$22"], ["$s7", "$23"], ["$t8", "$24"], ["$t9", "$25"], ["$k0", "$26"], ["$k1", "$27"], ["$gp", "$28"], ["$sp", "$29"], ["$fp", "$30"], ["$ra", "$31"]];
 
 // Instruction groups
@@ -67,7 +69,7 @@ function getCodeStart(code){
 //Checks that the string is ASCII
 function isASCII(string){
     for (var i = 0; i < string.length; i++) {
-        if(string.charCodeAt(i) >= 256){
+        if(string.charCodeAt(i) > 128){
             return false;
         }
     }
@@ -81,10 +83,8 @@ function parseLabels(code){
     var PCindex = PC;
     var GPindex = register[getRegisterId("$gp")];
     for (var i = getCodeStart(code); i < code.length; i++) {
-        console.log("Evaluating " + code[i] + " with addr 0x" + PCindex);
         //If it's a comment or .text, skip
         if(code[i].indexOf("#") === 0 || code[i].indexOf(".text") !== -1 || code[i] === " " || code[i] === ""){
-            console.log("Continuing");
             continue;
         }
 
@@ -94,7 +94,7 @@ function parseLabels(code){
 
         //(If) It's a match! (pun intended), store it. Otherwise, skip
         if(match !== null){
-            label = match[0];
+            label = match[0].replace(":", "");
         } else {
             PCindex = intToHex(hexToInt(PCindex) + 4);
             continue;
@@ -119,14 +119,6 @@ function parseLabels(code){
             PCindex = intToHex(hexToInt(PCindex) + 4);
         }
     }
-
-    //TODO: parse .data labels
-    for (var i = 0; i < getCodeStart(code); i++) {
-        if(code[i].indexOf("#") === 0 || code[i].indexOf(".data") !== -1 || code[i] === " " || code[i] === ""){
-            console.log("Continuing");
-            continue;
-        }
-    }
     return true;
 }
 
@@ -134,6 +126,36 @@ function parseLabels(code){
 function parseData(instruction){
     var success = false;
     var i = 0;
+
+    //Evaluate labels
+    var control = false;
+    //Get matches for labels (label:)
+    var label = instruction.match(/(\w+):/g);
+
+    //(If) It's a match! (pun intended), store it. Otherwise, skip
+    if(label !== null && label !== undefined){
+        control = true;
+        label = label[0].replace(":", "");
+    }
+    //If it's a reserved word, throw an error. (Handled by script.js/parseFile())
+    if(control && isReserved(label)){
+        return 2;
+    }
+    //If label is already used, throw an error. (Handled by script.js/parseFile())
+    if(control && labelExists(label)){
+        return 3;
+    }
+
+    //Otherwise, store label and its address
+    if(control){
+        var split = instruction.split(" ");
+        label = label.replace(":", "");
+        if(split.length === 1){
+            labels[label] = intToHex(binToInt(register[28]) + 1);
+        } else {
+            labels[label] = binToHex(register[28]);
+        }
+    }
 
     //Ignore labels
     var match = instruction.match(/(\w+):/g);
@@ -144,45 +166,83 @@ function parseData(instruction){
     //Ignore and trim empty spaces
     instruction = instruction.replace(/\s{2,}/g, "");
     if(instruction === "" || instruction === " " || instruction === ".data"){
-        return true;
+        return 1;
     }
 
-    //const directives = [".asciiz", ".ascii", ".byte", ".space", ".globl", ".half", ".word"];
+    //const directives = [".asciiz", ".ascii", ".byte", ".space", ".half", ".word"];
     if(instruction.indexOf(".asciiz") !== -1){
-        match = instruction.match(/\".+\"/g)[0].replace('"', '');
+        match = instruction.match(/\".+\"/g)[0].replace('\"', '');
+        match = match.split("");
+        match.pop();
+        console.log(match);
+        match = match.join("");
         if(!isASCII(match)){
-            return false;
+            return 0;
         }
-        for (i = 0; i < match.length-1; i++) {
+        for (i = 0; i < match.length; i++) {
             memory[binToHex(register[28])] = intToBin(match.charCodeAt(i)).substring(24);
             register[28] = intToBin(binToInt(register[28]) + 1);
         }
         memory[binToHex(register[28])] = "00000000";
         register[28] = intToBin(binToInt(register[28]) + 1);
-        return true;
-    }
-    if(instruction.indexOf(".ascii") !== -1){
+        return 1;
+    } else if(instruction.indexOf(".ascii") !== -1){
         match = instruction.match(/\".+\"/g)[0].replace('"', '');
         if(!isASCII(match)){
-            return false;
+            return 0;
         }
-        for (i = 0; i < match.length-1; i++) {
+        for (i = 0; i < match.length; i++) {
             memory[binToHex(register[28])] = intToBin(match.charCodeAt(i)).substring(24);
             register[28] = intToBin(binToInt(register[28]) + 1);
         }
-        return true;
-    }
-    if(instruction.indexOf(".space") !== -1){
+        return 1;
+    } else if(instruction.indexOf(".space") !== -1){
         var n = parseInt(instruction.replace(".space ", ""));
-        console.log(n);
         for (i = 0; i < n; i++) {
-            memory[binToHex(register[28])] = "000000";
+            memory[binToHex(register[28])] = "00000000";
             register[28] = intToBin(binToInt(register[28]) + 1);
         }
-        return true;
+        return 1;
+    } else if(instruction.indexOf(".byte") !== -1){
+        var n = instruction.replace(".byte ", "").replace(" ", "").split(",");
+        for (i = 0; i < n.length; i++) {
+            var temp = parseInt(n[i]);
+            if(isNaN(temp) || temp === undefined || temp === null) temp = 0;
+            if(temp < MIN_BYTE || temp > MAX_BYTE){ return 0; }
+            memory[binToHex(register[28])] = intToBin(temp).substring(24);
+            register[28] = intToBin(binToInt(register[28]) + 1);
+        }
+        return 1;
+    } else if(instruction.indexOf(".half") !== -1){
+        var n = instruction.replace(".half ", "").replace(" ", "").split(",");
+        for (i = 0; i < n.length; i++) {
+            var temp = parseInt(n[i]);
+            if(isNaN(temp) || temp === undefined || temp === null) temp = 0;
+            if(temp < MIN_16BIT || temp > MAX_16BIT){ return 0; }
+            temp = intToBin(temp);
+            temp = [temp.match(/.{1,4}/g)[6], temp.match(/.{1,4}/g)[7]];
+            memory[binToHex(register[28])] = temp[0];
+            register[28] = intToBin(binToInt(register[28]) + 1);
+            memory[binToHex(register[28])] = temp[1];
+            register[28] = intToBin(binToInt(register[28]) + 1);
+        }
+        return 1;
+    } else if(instruction.indexOf(".word") !== -1){
+        var n = instruction.replace(".word ", "").replace(" ", "").split(",");
+        for (i = 0; i < n.length; i++) {
+            var temp = parseInt(n[i]);
+            if(isNaN(temp) || temp === undefined || temp === null) temp = 0;
+            if(temp < MIN_SINT || temp > MAX_SINT){ return 0; }
+            temp = intToBin(temp).match(/.{1,8}/g);
+            for (var j = 0; j < temp.length; j++) {
+                memory[binToHex(register[28])] = temp[j];
+                register[28] = intToBin(binToInt(register[28]) + 1);
+            }
+        }
+        return 1;
     }
 
-    return false;
+    return 0;
 }
 
 //Parse .text instruction
@@ -204,9 +264,10 @@ function parseText(instruction){
 
     //Aprove if instruction is syscall
     if(instruction === "syscall"){
+        var result = [true, PC];
         memory[PC] = ["syscall"];
         PC = intToHex(hexToInt(PC) + 4);
-        return true;
+        return result;
     }
 
     //Strip empty spaces and commas
@@ -326,6 +387,7 @@ function parseText(instruction){
 
     //Add instruction into memory
     if(success){
+        //Return true and memory address
         var result = [true, PC];
         memory[PC] = split;
         PC = intToHex(hexToInt(PC) + 4);
