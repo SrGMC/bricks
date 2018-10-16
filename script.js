@@ -46,6 +46,21 @@ var settings = [false];
 display();
 var t = setInterval(display, 500);
 
+if (("standalone" in window.navigator) && !window.navigator.standalone){
+    console.log("Full screen mode");
+    document.getElementById('install').style.display = "initial";
+}
+
+function showModal(id){
+    document.getElementById(id).style.display = 'flex';
+    document.getElementById('modal_background').style.display = 'initial';
+}
+
+function hideModal(id){
+    document.getElementById(id).style.display = 'none';
+    document.getElementById('modal_background').style.display = 'none';
+}
+
 function updateSidebar(){
     var option = 1;
     if(document.getElementById('option-2').checked) {
@@ -133,13 +148,15 @@ function binToASCII(bin){
     if(pad(bin, 32) === pad("0", 32)){
         return ".";
     }
+    if(!isASCII(String.fromCharCode(binToInt(pad(bin, 32))))){
+        return ".";
+    }
     return String.fromCharCode(binToInt(pad(bin, 32)));
 }
 
 function showData(){
     document.getElementById("history").innerHTML = "";
     var offset = hexToInt("10000000");
-    console.log(hexToInt(dataEnd) - offset);
     for (var i = 0; i < hexToInt(dataEnd)-offset; i += 8) {
         document.getElementById("history").innerHTML += "[" + intToHex(offset+i) + "]<br>&nbsp;&nbsp;" +
                                                         dataHex(offset+i) +
@@ -272,9 +289,9 @@ function parseFile(){
 
     //Display the user if there's an error with a label
     if(!control[0] && control[1] === 0){
-        document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + control[2]) + "</strong>: " + instructions[control[2]] + " is using a reserved word as label. </span><br>";
+        document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseLabels()</i> <strong>Line ' + (1 + control[2]) + "</strong>: " + instructions[control[2]] + " is using a reserved word as label. </span><br>";
     } else if(!control[0] && control[1] === 1){
-        document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + control[2]) + "</strong>: " + instructions[control[2]] + ". Label already exists. <br>";
+        document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseLabels()</i> <strong>Line ' + (1 + control[2]) + "</strong>: " + instructions[control[2]] + ". Label already exists. <br>";
     }
 
     //Evaluate all .data instructions
@@ -282,15 +299,19 @@ function parseFile(){
     for (var i = 0; i < getCodeStart(instructions) && control; i++) {
         var status = parseData(instructions[i]);
         if(status === 0){
-            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + i) + "</strong>: " + instructions[i] + " is not a valid instruction. </span><br>";
+            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseData()</i> <strong>Line ' + (1 + i) + "</strong>: " + instructions[i] + " is not a valid instruction. </span><br>";
             control = false;
             break;
         } else if(status === 2){
-            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + i) + "</strong>: " + instructions[i] + " is using a reserved word as label. </span><br>";
+            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseData()</i> <strong>Line ' + (1 + i) + "</strong>: " + instructions[i] + " is using a reserved word as label. </span><br>";
             control = false;
             break;
         } else if(status === 3){
-            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + i) + "</strong>: " + instructions[i] + ". Label already exists. </span><br>";
+            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseData()</i> <strong>Line ' + (1 + i) + "</strong>: " + instructions[i] + ". Label already exists. </span><br>";
+            control = false;
+            break;
+        } else if(status === 4){
+            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseData()</i> <strong>Line ' + (1 + i) + "</strong>: " + instructions[i] + " has unknown characters </span><br>";
             control = false;
             break;
         }
@@ -307,10 +328,10 @@ function parseFile(){
             if(instructions[i].replace(/(\w+):/g, "").replace(/\s{2,}/g, "") === "" && !settings[0]){
                 continue;
             }
-            document.getElementById("history").innerHTML += '<span class="num">' + index + '.</span><span class="code" ' + ((status[0]) ? 'id="l' + status[1] + '"' : "") + '>' + ((settings[0] === true) ? instructions[i].replace(" ", "&nbsp;") : instructions[i].replace(/(\w+):/g, "")) + "</span><br>";
+            document.getElementById("history").innerHTML += '<span class="num">' + index + '.</span><span class="code" ' + ((status[0]) ? 'id="l' + status[1] + '"' : "") + '>' + ((settings[0] === true) ? instructions[i].replace(" ", "&nbsp;") : instructions[i].replace(/(\w+):/g, "").replace(/#.+/g, "")) + "</span><br>";
             index++;
         } else {
-            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Line ' + (1 + i) + "</strong>: " + instructions[i] + " is not a valid instruction. </span><br>";
+            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseText()</i> <strong>Line ' + (1 + i) + "</strong>: " + instructions[i] + " is not a valid instruction. </span><br>";
             break;
         }
     }

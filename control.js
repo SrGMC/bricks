@@ -163,8 +163,10 @@ function parseData(instruction){
         instruction = instruction.replace(match[0], "");
     }
 
-    //Ignore and trim empty spaces
+    //Ignore and trim empty spaces and ignore comments
     instruction = instruction.replace(/\s{2,}/g, "");
+    instruction = instruction.replace(/\t{1,}/g, "");
+    instruction = instruction.replace(/#.+/g, "");
     if(instruction === "" || instruction === " " || instruction === ".data"){
         return 1;
     }
@@ -174,22 +176,25 @@ function parseData(instruction){
         match = instruction.match(/\".+\"/g)[0].replace('\"', '');
         match = match.split("");
         match.pop();
-        console.log(match);
         match = match.join("");
         if(!isASCII(match)){
-            return 0;
+            return 4;
         }
         for (i = 0; i < match.length; i++) {
             memory[binToHex(register[28])] = intToBin(match.charCodeAt(i)).substring(24);
             register[28] = intToBin(binToInt(register[28]) + 1);
         }
+        //Add leading null
         memory[binToHex(register[28])] = "00000000";
         register[28] = intToBin(binToInt(register[28]) + 1);
         return 1;
     } else if(instruction.indexOf(".ascii") !== -1){
-        match = instruction.match(/\".+\"/g)[0].replace('"', '');
+        match = instruction.match(/\".+\"/g)[0].replace('\"', '');
+        match = match.split("");
+        match.pop();
+        match = match.join("");
         if(!isASCII(match)){
-            return 0;
+            return 4;
         }
         for (i = 0; i < match.length; i++) {
             memory[binToHex(register[28])] = intToBin(match.charCodeAt(i)).substring(24);
@@ -198,6 +203,7 @@ function parseData(instruction){
         return 1;
     } else if(instruction.indexOf(".space") !== -1){
         var n = parseInt(instruction.replace(".space ", ""));
+        if(n === undefined ||n=== null) return 0;
         for (i = 0; i < n; i++) {
             memory[binToHex(register[28])] = "00000000";
             register[28] = intToBin(binToInt(register[28]) + 1);
@@ -220,7 +226,7 @@ function parseData(instruction){
             if(isNaN(temp) || temp === undefined || temp === null) temp = 0;
             if(temp < MIN_16BIT || temp > MAX_16BIT){ return 0; }
             temp = intToBin(temp);
-            temp = [temp.match(/.{1,4}/g)[6], temp.match(/.{1,4}/g)[7]];
+            temp = [temp.match(/.{1,8}/g)[2], temp.match(/.{1,8}/g)[3]];
             memory[binToHex(register[28])] = temp[0];
             register[28] = intToBin(binToInt(register[28]) + 1);
             memory[binToHex(register[28])] = temp[1];
@@ -257,7 +263,9 @@ function parseText(instruction){
     }
 
     //Ignore empty spaces, comments and .text keyword
-    instruction = instruction.replace(/(#(\w+.+)|#(\s+\w+.+))/g, "");
+    instruction = instruction.replace(/#.+/g, "");
+    instruction = instruction.replace(/\s{2,}/g, "");
+    instruction = instruction.replace(/\t{1,}/g, "");
     if(instruction === "" || instruction === " " || instruction === ".text"){
         return true;
     }
@@ -396,8 +404,6 @@ function parseText(instruction){
         return false;
     }
 }
-
-//TODO: Parse .data instructions
 
 //TODO: Decode instruction
 function decode(instruction){

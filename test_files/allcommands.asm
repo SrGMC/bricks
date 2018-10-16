@@ -1,4 +1,13 @@
+.data
+    test1: .ascii "Test1"
+    test2: .asciiz "Test2"
+    test3: .byte -1, 1
+    test4: .half -1, 1
+    test5: .word -1, 1
+    test6: .space 3
+
 # Test
+.text
 main: beq $t0 $t0 main #Test
 bge $t0 $t0 main
 bgeu $t0 $t0 main
