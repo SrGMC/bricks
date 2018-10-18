@@ -1,6 +1,6 @@
 .data
 
-msg: .asciiz "Introduce un número"
+msg: .asciiz "Introduce un numero"
 
 
 .text
@@ -29,7 +29,7 @@ while:
 	syscall
 	addi $t2 $t2 1
 	b while
-fin: 
+fin:
 	jr $ra
 
 

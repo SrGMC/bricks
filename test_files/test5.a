@@ -1,7 +1,7 @@
 
 .data
 
-msg: .ascii "Introduce un número"
+msg: .ascii "Introduce un numero"
 
 .text
 

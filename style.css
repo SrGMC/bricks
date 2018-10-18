@@ -112,9 +112,11 @@ a {
 }
 
 .content #history {
+    overflow-x: auto;
     overflow-y: auto;
 
     text-align: left;
+    white-space: nowrap;
 }
 
 .content .num {

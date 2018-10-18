@@ -22,7 +22,8 @@ var LO = "00000000";
 
 var memory = {};
 var register = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,hexToBin("10000000"),hexToBin("7fffefff"),hexToBin("7fffefff"),0];
-var labels = {};
+var textlabels = {};
+var datalabels = {};
 var textEnd = PC;
 var dataEnd = PC;
 
@@ -40,7 +41,7 @@ var text = document.getElementById('history').innerHTML;
 
 //Settings array
 //show whole code,
-var settings = [false];
+var settings = [true];
 
 //Web
 display();
@@ -122,7 +123,8 @@ function clearCode(){
     document.getElementById("output").innerHTML = "";
     instructions = [];
     index = 0;
-    labels = {};
+    datalabels = {};
+    textlabels = {};
     memory = {};
 }
 
@@ -155,9 +157,30 @@ function binToASCII(bin){
 }
 
 function showData(){
-    document.getElementById("history").innerHTML = "";
+    document.getElementById("history").innerHTML = "[ User data segment&nbsp; ]<br>";
     var offset = hexToInt("10000000");
     for (var i = 0; i < hexToInt(dataEnd)-offset; i += 8) {
+        document.getElementById("history").innerHTML += "[" + intToHex(offset+i) + "]<br>&nbsp;&nbsp;" +
+                                                        dataHex(offset+i) +
+                                                        dataHex(offset+i+1) +
+                                                        dataHex(offset+i+2) +
+                                                        dataHex(offset+i+3) + "&nbsp;" +
+                                                        dataHex(offset+i+4) +
+                                                        dataHex(offset+i+5) +
+                                                        dataHex(offset+i+6) +
+                                                        dataHex(offset+i+7) + "&nbsp;&nbsp;";
+        document.getElementById("history").innerHTML += binToASCII(memory[intToHex(offset+i)]) + "&nbsp;" +
+                                                        ((dataHex(offset+i+1) === "&nbsp;&nbsp;") ? "." : binToASCII(memory[intToHex(offset+i+1)])) + "&nbsp;" +
+                                                        ((dataHex(offset+i+2) === "&nbsp;&nbsp;") ? "." : binToASCII(memory[intToHex(offset+i+2)])) + "&nbsp;" +
+                                                        ((dataHex(offset+i+3) === "&nbsp;&nbsp;") ? "." : binToASCII(memory[intToHex(offset+i+3)])) + "&nbsp;" +
+                                                        ((dataHex(offset+i+4) === "&nbsp;&nbsp;") ? "." : binToASCII(memory[intToHex(offset+i+4)])) + "&nbsp;" +
+                                                        ((dataHex(offset+i+5) === "&nbsp;&nbsp;") ? "." : binToASCII(memory[intToHex(offset+i+5)])) + "&nbsp;" +
+                                                        ((dataHex(offset+i+6) === "&nbsp;&nbsp;") ? "." : binToASCII(memory[intToHex(offset+i+6)])) + "&nbsp;" +
+                                                        ((dataHex(offset+i+7) === "&nbsp;&nbsp;") ? "." : binToASCII(memory[intToHex(offset+i+7)])) + "<br>";
+    }
+    document.getElementById("history").innerHTML += "<br><br>[ User stack segment ]<br>";
+    offset = hexToInt("7fffefff");
+    for (var i = 0; i < binToInt(register[29])-offset; i += 8) {
         document.getElementById("history").innerHTML += "[" + intToHex(offset+i) + "]<br>&nbsp;&nbsp;" +
                                                         dataHex(offset+i) +
                                                         dataHex(offset+i+1) +
@@ -261,8 +284,10 @@ function handleFileSelect(evt) {
         //Clear code and memory
         instructions = [];
         index = 0;
-        labels = {};
+        textlabels = {};
+        datalabels = {};
         memory = {};
+        clearRegisters();
         document.getElementById("history").innerHTML = "";
 
         //Store the data as an array, in lowercase
@@ -325,7 +350,7 @@ function parseFile(){
     for (var i = getCodeStart(instructions) + ((settings[0] === true) ? 0 : 1); i < instructions.length && control; i++) {
         var status = parseText(instructions[i]);
         if(status[0] || status){
-            if(instructions[i].replace(/(\w+):/g, "").replace(/\s{2,}/g, "") === "" && !settings[0]){
+            if((instructions[i].replace(/(\w+):/g, "").replace(/\s{2,}/g, "") === "" || instructions[i] === " ") && !settings[0]){
                 continue;
             }
             document.getElementById("history").innerHTML += '<span class="num">' + index + '.</span><span class="code" ' + ((status[0]) ? 'id="l' + status[1] + '"' : "") + '>' + ((settings[0] === true) ? instructions[i].replace(" ", "&nbsp;") : instructions[i].replace(/(\w+):/g, "").replace(/#.+/g, "")) + "</span><br>";

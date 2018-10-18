@@ -51,7 +51,7 @@ function isReserved(word){
 }
 
 function labelExists(label){
-    return labels[label] !== undefined;
+    return textlabels[label] !== undefined || datalabels[label] !== undefined;
 }
 
 //Get the starting line of the code
@@ -76,14 +76,19 @@ function isASCII(string){
     return true;
 }
 
-//Parse all the labels
-function parseLabels(code){
+//Parse all the .text labels
+function parseLabels(lines){
     //.text
 
+    //Clone the array
+    var code = lines.slice(0);
+
     var PCindex = PC;
-    var GPindex = register[getRegisterId("$gp")];
     for (var i = getCodeStart(code); i < code.length; i++) {
-        //If it's a comment or .text, skip
+        //Remove spaces, tabs and comments
+        code[i] = code[i].replace(/\s{2,}/g, "");
+        code[i] = code[i].replace(/\t{1,}/g, "");
+        code[i] = code[i].replace(/#.+/g, "");
         if(code[i].indexOf("#") === 0 || code[i].indexOf(".text") !== -1 || code[i] === " " || code[i] === ""){
             continue;
         }
@@ -111,7 +116,7 @@ function parseLabels(code){
         //Otherwise, store label and its address
         var split = code[i].split(" ");
         label = label.replace(":", "");
-        labels[label] = PCindex;
+        textlabels[label] = PCindex;
         //If label is alone, the next line has the same address as the label
         if(split.length === 1){
             PCindex = intToHex(hexToInt(PCindex));
@@ -151,9 +156,9 @@ function parseData(instruction){
         var split = instruction.split(" ");
         label = label.replace(":", "");
         if(split.length === 1){
-            labels[label] = intToHex(binToInt(register[28]) + 1);
+            datalabels[label] = intToHex(binToInt(register[28]) + 1);
         } else {
-            labels[label] = binToHex(register[28]);
+            datalabels[label] = binToHex(register[28]);
         }
     }
 
@@ -286,13 +291,13 @@ function parseText(instruction){
     //G1 ins rs1 rs2 etiq
     for (i = 0; i < groups[0].length && !success; i++) {
         if((split[0] === groups[0][i]) && getRegisterId(split[1] !== -1) && getRegisterId(split[2] !== -1) && labelExists(split[3])){
-            split[3] = hexToBin(labels[split[3]]);
+            split[3] = hexToBin(textlabels[split[3]]);
             success = true;
         }
     }
     //G2 ins rd rs1 inm16
     for (i = 0; i < groups[1].length  && !success; i++) {
-        if((split[0] === groups[1][i]) && getRegisterId(split[1] !== -1) && getRegisterId(split[2] !== -1)){
+        if((split[0] === groups[1][i]) && getRegisterId(split[1] !== -1) && getRegisterId(split[2] !== -1) && split[3] !== undefined){
             if(split[3].indexOf("0x") === 0 && MIN_16BIT <= hexToInt(split[3]) && hexToInt(split[3]) <= MAX_16BIT){
                 split[3] = hexToBin(split[3]);
                 success = true;
@@ -327,8 +332,16 @@ function parseText(instruction){
                 split[2] = hexToBin(split[2]);
                 success = true;
             } else if (labelExists(split[2])) {
-                split[2] = hexToBin(labels[split[2]]);
                 success = true;
+            } else if(split[2].indexOf("($") !== -1){ // valor($r), dir($r)
+                if(getRegisterId(split[2].substring(split[2].indexOf("(")+1, split[2].length-1)) != -1){
+                    if((split[2].substring(split[2].indexOf("("), split[2].length).length >= 4 &&
+                       split[2].substring(split[2].indexOf("("), split[2].length).length <= 7) ||
+                       labelExists(split[2].substring(0, split[2].indexOf("(")))               ||
+                       !isNaN(parseInt(split[2]))){
+                        success = true;
+                    }
+                }
             }
         }
     }
@@ -339,7 +352,7 @@ function parseText(instruction){
                 split[2] = hexToBin(split[2]);
                 success = true;
             } else if (labelExists(split[2])) {
-                split[2] = hexToBin(labels[split[2]]);
+                split[2] = hexToBin(textlabels[split[2]]);
                 success = true;
             }
         }
@@ -381,7 +394,7 @@ function parseText(instruction){
                 split[1] = hexToBin(split[1]);
                 success = true;
             } else if (labelExists(split[1])) {
-                split[1] = hexToBin(labels[split[1]]);
+                split[1] = hexToBin(textlabels[split[1]]);
                 success = true;
             }
         }
