@@ -1,5 +1,5 @@
 /*
-    Decoder
+    Parser
  */
 
 //Constants
@@ -17,35 +17,26 @@ const registerid = [["$zero", "$0"], ["$at", "$1"], ["$v0", "$2"], ["$v1","$3"],
 ["$t8", "$24"], ["$t9", "$25"], ["$k0", "$26"], ["$k1", "$27"], ["$gp","$28"],
 ["$sp", "$29"], ["$fp", "$30"], ["$ra", "$31"]];
 
-// Instructions
-const groups = [
-        //G1 : ins rs1 rs2 etiq
-    ["beq", "bge", "bgeu", "bgt", "bgtu", "ble", "bleu", "blt", "bltu", "bne"],
-        //G2 : ins rd rs1 inm16
-    ["addi", "addiu", "ori", "xori", "andi", "slti", "sltui"],
-        //G3 : ins rd rs1 rs2
-    ["sllv", "srav", "srlv", "rem", "remu", "add", "addu", "sub", "subu", "or", "xor", "and", "nor", "div", "divu", "mul", "mulo", "mulou", "rol",
-    "ror", "seq", "sge", "sgeu", "sgt", "sgtu", "sle", "sleu", "slt", "sltu", "sne"],
-        //G4 : ins rd rs1 inm5
-    ["sll", "sra", "srl"],
-        //G5 : ins rd/f dir
-    ["la", "lb", "lbu", "lh", "lhu", "lw", "sb", "sh", "sw"],
-        //G6 : ins rs etiq
-    ["beqz", "bgez", "bgezal", "bgtz", "blez", "bltzal", "bltz", "bnez"],
-        //G7 : ins rd inm16
-    ["lui"],
-        //G8 : ins rd inm32
-    ["li"],
-        //G9 : ins rd rs
-    ["move", "abs", "neg", "negu", "not", "div", "divu", "mult", "multu"],
-        //G10: ins etiq
-    ["b", "j", "jal"],
-        //G11: ins rd/s
-    ["mfhi", "mflo", "mthi", "mtlo", "jalr", "jr"]
-];
+//Splits the given line into an array.
+//Returns: Array: [0] - Label (-1 if there isn't one), [1] - Instruction array (-1 if there isn't one)
+function splitter(line){
+    //Get label
+    var label = line.match(/(\w+):/g);
+    label = (label !== null) ? label[0].replace(":", "") : -1;
 
-function isHex(hex){
-    return (hex.indexOf("0x") === 0) ? true : false;
+    //Get the instruction, split it and remove empty whitespaces
+    var instruction = line.match(/(?!(\w+:))[^:\s].+/g);
+    instruction = (instruction !== null) ? instruction[0].replace(/,/g, " ").split(" ").filter(function(v){return v!==''}) : -1;
+    if(directives[instruction[0]] !== null){
+        var array = [];
+        for (var i = 1; i < instruction.length; i++) {
+            array.push(instruction[i]);
+        }
+        instruction.splice(1);
+        instruction.push(array);
+    }
+
+    return [label, instruction];
 }
 
 //Get the starting line of the code
@@ -58,40 +49,6 @@ function getCodeStart(code){
         }
     }
     return index;
-}
-
-//Checks that the string is ASCII
-function isASCII(string){
-    for (var i = 0; i < string.length; i++) {
-        if(string.charCodeAt(i) > 128){
-            return false;
-        }
-    }
-    return true;
-}
-
-//Splits the given line into an array. The first item is the label, (if there's one),
-//and the second one is the splitted instruction (if there's one)
-function splitter(line){
-    //Get label
-    var label = line.match(/(\w+):/g);
-    label = (label !== null) ? label[0].replace(":", "") : -1;
-
-    //Get the instruction, split it and remove empty whitespaces
-    var instruction = line.match(/(?!(\w+:))[^:\s].+/g);
-    instruction = (instruction !== null) ? instruction[0].replace(/,/g, " ").split(" ").filter(function(v){return v!==''}) : -1;
-
-    return [label, instruction];
-}
-
-function isReserved(word){
-    for (var i = 0; i < groups.length; i++) {
-        for (var j = 0; j < groups[i].length; j++) {
-            if(groups[i][j] === word)
-                return true;
-        }
-    }
-    return false;
 }
 
 function labelExists(label){
@@ -108,6 +65,20 @@ function labelExists(label){
     return false;
 }
 
+//Checks that the string is ASCII
+function isASCII(string){
+    for (var i = 0; i < string.length; i++) {
+        if(string.charCodeAt(i) > 128){
+            return false;
+        }
+    }
+    return true;
+}
+
+function isReserved(word){
+    return operations[word] !== undefined;
+}
+
 function checkLabel(label){
     if(isReserved(label) || labelExists(label)){
         return false;
@@ -115,8 +86,42 @@ function checkLabel(label){
     return true;
 }
 
+//Returns the addressing type.
+//Returns: -1 if it's not recognized, 0 for hex, 1 for value($reg), 2 for label($reg), 3 for label
+function checkDir(dir){
+    if(isHex(dir)){
+        dir = dir.replace("0x", "");
+        return ((hexToInt(10000000) <= hexToInt(dir)) && (hexToInt(dir) <= hexToInt(dataEnd))) ? 0 : -1;
+    } else if(dir.indexOf("(") !== -1) {
+        var reg = insReg(dir.substring(dir.indexOf("$"), dir.length-1));
+        var value = parseInt(dir);
+        if(value === null || value === undefined || isNaN(value)){
+            value = false;
+            var label = dir.substring(0, dir.indexOf("("));
+            for (var i = 0; i < datalabels.length; i++) {
+                if(datalabels[i][0] === label){
+                    value = true;
+                }
+            }
+            return (value && reg) ? 2 : -1;
+        } else {
+            return (typeof value === 'number' && reg) ? 1 : -1;
+        }
+
+    } else {
+        for (var i = 0; i < datalabels.length; i++) {
+            if(datalabels[i][0] === dir){
+                return 3;
+            }
+        }
+        return -1;
+    }
+}
+
 //Parse .data instruction
+//Returns: 0 - Succesfully parsed, 1 - Unrecognized, 2 - Incorrect label, 3 - Unrecognized characters
 //TODO: Clean up
+//TODO: Get check from directives object. Run the check with the instruction to modify it. Add it to memory
 function parseData(line){
     var i = 0;
     var temp;
@@ -209,10 +214,10 @@ function parseData(line){
     return 1;
 }
 
-//Parse .text instruction
-//TODO: Clean up
+//Parse .text instruction.
+//Returns: 0 - Succesfully parsed, 1 - Unrecognized, 2 - Incorrect label
 function parseText(line){
-    var success = false;
+    var success = true;
     var i = 0;
 
     //Get the components of the instruction
@@ -239,122 +244,13 @@ function parseText(line){
         success = true;
     }
 
-    //Check if instructions are valid. Then store them in memory. INT, HEX and LABELS are stored in binary
-    //G1 ins rs1 rs2 etiq
-    for (i = 0; i < groups[0].length && !success; i++) {
-        if((instruction[0] === groups[0][i]) && getRegisterId(instruction[1] !== -1) && getRegisterId(instruction[2] !== -1) && labelExists(instruction[3])){
-            instruction[3] = hexToBin(textlabels[instruction[3]]);
+    //Get the functions that check the instruction
+    var checks = operations[instruction[0]];
+    for (i = 0; i < checks.length && success && checks !== undefined; i++) {
+        if(checks[i](instruction[i+1])){
             success = true;
-        }
-    }
-    //G2 ins rd rs1 inm16
-    for (i = 0; i < groups[1].length  && !success; i++) {
-        if((instruction[0] === groups[1][i]) && getRegisterId(instruction[1] !== -1) && getRegisterId(instruction[2] !== -1) && instruction[3] !== undefined){
-            if(instruction[3].indexOf("0x") === 0 && MIN_16BIT <= hexToInt(instruction[3]) && hexToInt(instruction[3]) <= MAX_16BIT){
-                instruction[3] = hexToBin(instruction[3]);
-                success = true;
-            } else if(MIN_16BIT <= instruction[3] && instruction[3] <= MAX_16BIT){
-                instruction[3] = intToBin(instruction[3]);
-                success = true;
-            }
-        }
-    }
-    //G3 ins rd rs1 rs2
-    for (i = 0; i < groups[2].length && !success; i++) {
-        if((instruction[0] === groups[2][i]) && getRegisterId(instruction[1] !== -1) && getRegisterId(instruction[2] !== -1) && getRegisterId(instruction[3] !== -1)){
-            success = true;
-        }
-    }
-    //G4 ins rd rs1 inm5
-    for (i = 0; i < groups[3].length && !success; i++) {
-        if((instruction[0] === groups[3][i]) && getRegisterId(instruction[1] !== -1) && getRegisterId(instruction[2] !== -1)){
-            if(instruction[3].indexOf("0x") === 0 && 0 <= hexToInt(instruction[3]) && hexToInt(instruction[3]) <= MAX_5BIT){
-                instruction[3] = hexToBin(instruction[3]);
-                success = true;
-            } else if(0 <= instruction[3] && instruction[3] <= MAX_5BIT){
-                instruction[3] = intToBin(instruction[3]);
-                success = true;
-            }
-        }
-    }
-    //G5 ins rd dir
-    for (i = 0; i < groups[4].length && !success; i++) {
-        if((instruction[0] === groups[4][i]) && getRegisterId(instruction[1] !== -1)){
-            if(instruction[2].indexOf("0x") !== -1){
-                instruction[2] = hexToBin(instruction[2]);
-                success = true;
-            } else if (labelExists(instruction[2])) {
-                success = true;
-            } else if(instruction[2].indexOf("($") !== -1){ // valor($r), dir($r)
-                if(getRegisterId(instruction[2].substring(instruction[2].indexOf("(")+1, instruction[2].length-1)) != -1){
-                    if((instruction[2].substring(instruction[2].indexOf("("), instruction[2].length).length >= 4 &&
-                       instruction[2].substring(instruction[2].indexOf("("), instruction[2].length).length <= 7) ||
-                       labelExists(instruction[2].substring(0, instruction[2].indexOf("(")))               ||
-                       !isNaN(parseInt(instruction[2]))){
-                        success = true;
-                    }
-                }
-            }
-        }
-    }
-    //G6 ins rs etiq
-    for (i = 0; i < groups[5].length && !success; i++) {
-        if((instruction[0] === groups[5][i]) && getRegisterId(instruction[1] !== -1) &&  labelExists(instruction[2])){
-            if(instruction[2].indexOf("0x") !== -1){
-                instruction[2] = hexToBin(instruction[2]);
-                success = true;
-            } else if (labelExists(instruction[2])) {
-                instruction[2] = hexToBin(textlabels[instruction[2]]);
-                success = true;
-            }
-        }
-    }
-    //G7 ins rd inm16
-    for (i = 0; i < groups[6].length && !success; i++) {
-        if((instruction[0] === groups[6][i]) && getRegisterId(instruction[1] !== -1)){
-            if(instruction[2].indexOf("0x") === 0 && MIN_16BIT <= hexToInt(instruction[2]) && hexToInt(instruction[2]) <= MAX_16BIT){
-                instruction[2] = hexToBin(instruction[2]);
-                success = true;
-            } else if(MIN_16BIT <= instruction[2] && instruction[2] <= MAX_16BIT){
-                instruction[2] = intToBin(instruction[2]);
-                success = true;
-            }
-        }
-    }
-    //G8 ins rd inm32
-    for (i = 0; i < groups[7].length && !success; i++) {
-        if((instruction[0] === groups[7][i]) && getRegisterId(instruction[1] !== -1)){
-            if(instruction[2].indexOf("0x") === 0 && MIN_SINT <= hexToInt(instruction[2]) && hexToInt(instruction[2]) <= MAX_SINT){
-                instruction[2] = hexToBin(instruction[2]);
-                success = true;
-            } else if(MIN_SINT <= instruction[2] && instruction[2] <= MAX_SINT){
-                instruction[2] = intToBin(instruction[2]);
-                success = true;
-            }
-        }
-    }
-    //G9 ins rd rs
-    for (i = 0; i < groups[8].length && !success; i++) {
-        if((instruction[0] === groups[8][i]) && getRegisterId(instruction[1] !== -1) && getRegisterId(instruction[2] !== -1)){
-            success = true;
-        }
-    }
-    //G10 ins etiqueta
-    for (i = 0; i < groups[9].length && !success; i++) {
-        if((instruction[0] === groups[9][i])){
-            if(instruction[1].indexOf("0x") !== -1){
-                instruction[1] = hexToBin(instruction[1]);
-                success = true;
-            } else if (labelExists(instruction[1])) {
-                instruction[1] = hexToBin(textlabels[instruction[1]]);
-                success = true;
-            }
-        }
-    }
-    //G11 ins rd
-    for (i = 0; i < groups[10].length && !success; i++) {
-        if((instruction[0] === groups[10][i]) && getRegisterId(instruction[1] !== -1)){
-            success = true;
+        } else {
+            success = false;
         }
     }
 

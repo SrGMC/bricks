@@ -59,15 +59,15 @@ sne $t0 $t0 $t0
 sll $t0 $t0 5
 sra $t0 $t0 5
 srl $t0 $t0 5
-la $t0 0x000000
-lb $t0 0x000000
-lbu $t0 0x000000
-lh $t0 0x000000
-lhu $t0 0x000000
-lw $t0 0x000000
-sb $t0 0x000000
-sh $t0 0x000000
-sw $t0 0x000000
+la $t0 test1($t0)
+lb $t0 4($t0)
+lbu $t0 main($t0)
+lh $t0 test4
+lhu $t0 test5
+lw $t0 test6
+sb $t0 0x10000000
+sh $t0 0x10000000
+sw $t0 0x10000000
 beqz $t0 main
 bgez $t0 main
 bgezal $t0 main
@@ -83,8 +83,6 @@ abs $t0 $t0
 neg $t0 $t0
 negu $t0 $t0
 not $t0 $t0
-div $t0 $t0
-divu $t0 $t0
 mult $t0 $t0
 multu $t0 $t0
 b 0x00000000

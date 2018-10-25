@@ -25,7 +25,7 @@ var register = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,hexToBin
 var textlabels = [];
 var datalabels = [];
 var textEnd = PC;
-var dataEnd = PC;
+var dataEnd = "10000000";
 
 var last = PC;
 
@@ -150,9 +150,11 @@ function getLabelName(hex){
 }
 
 function showText(){
-    document.getElementById("history").innerHTML = "";
-    for (var i = 0; i <= hexToInt(textEnd); i += 4) {
-        document.getElementById("history").innerHTML += '<span class="num">' + getLabelName(intToHex(i)) + (i/4 + 1) + '.</span><span class="code" id="l' + intToHex(i) + '">' + memory[intToHex(i)].join(" ") + "</span><br>";
+    if(control){
+        document.getElementById("history").innerHTML = "";
+        for (var i = 0; i <= hexToInt(textEnd); i += 4) {
+            document.getElementById("history").innerHTML += '<span class="num">' + getLabelName(intToHex(i)) + (i/4 + 1) + '.</span><span class="code" id="l' + intToHex(i) + '">' + memory[intToHex(i)].join(" ") + "</span><br>";
+        }
     }
 }
 
