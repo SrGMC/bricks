@@ -60,23 +60,6 @@ function xnor(src1, src2){
 }
 
 //PADDING
-function padLeft(string, n, unsigned){
-    var padding = "0";
-    var result = "";
-    if(unsigned === undefined || unsigned === true){
-        padding = "0";
-    } else if(!unsigned){
-        if(string.indexOf("1") === 0){
-            padding = "1";
-        }
-    }
-
-    for (var i = 0; i < n-string.length; i++) {
-        result += padding;
-    }
-    return result + string;
-}
-
 function pad(n, width, z) {
   z = z || '0';
   n = n + '';

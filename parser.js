@@ -27,7 +27,7 @@ function splitter(line){
     //Get the instruction, split it and remove empty whitespaces
     var instruction = line.match(/(?!(\w+:))[^:\s].+/g);
     instruction = (instruction !== null) ? instruction[0].replace(/,/g, " ").split(" ").filter(function(v){return v!==''}) : -1;
-    if(directives[instruction[0]] !== null){
+    if(directives[instruction[0]] !== undefined){
         var array = [];
         for (var i = 1; i < instruction.length; i++) {
             array.push(instruction[i]);
@@ -120,12 +120,8 @@ function checkDir(dir){
 
 //Parse .data instruction
 //Returns: 0 - Succesfully parsed, 1 - Unrecognized, 2 - Incorrect label, 3 - Unrecognized characters
-//TODO: Clean up
-//TODO: Get check from directives object. Run the check with the instruction to modify it. Add it to memory
 function parseData(line){
     var i = 0;
-    var temp;
-    var text;
 
     //Get the components of the instruction
     temp = splitter(line);
@@ -135,89 +131,26 @@ function parseData(line){
     //Check the label and store it
     if(label !== -1){
         if(checkLabel(label)){
-            datalabels.push([label, binToHex(register[28])]);
+            datalabels.push([label, dataEnd]);
         } else {
             return 2;
         }
     }
 
-    //const directives = [".asciiz", ".ascii", ".byte", ".space", ".half", ".word"];
+    //Pass if .data
     if(instruction[0] === ".data"){
-        return 0;
-    } else if(instruction[0] === ".asciiz"){
-        text = instruction.slice(1).join(" ").replace('\"', "").replace('\"', "");
-        if(!isASCII(text)){
-            return 3;
-        }
-        for (i = 0; i < text.length; i++) {
-            memory[binToHex(register[28])] = intToBin(text.charCodeAt(i)).substring(24);
-            register[28] = intToBin(binToInt(register[28]) + 1);
-        }
-        //Add leading null
-        memory[binToHex(register[28])] = "00000000";
-        register[28] = intToBin(binToInt(register[28]) + 1);
-        return 0;
-    } else if(instruction[0] === ".ascii"){
-        text = instruction.slice(1).join(" ").replace('\"', "").replace('\"', "");
-        if(!isASCII(text)){
-            return 3;
-        }
-        for (i = 0; i < text.length; i++) {
-            memory[binToHex(register[28])] = intToBin(text.charCodeAt(i)).substring(24);
-            register[28] = intToBin(binToInt(register[28]) + 1);
-        }
-        return 0;
-    } else if(instruction[0] === ".space"){
-        var n = parseInt(instruction[1]);
-        if(n === undefined ||n === null) return 0;
-        for (i = 0; i < n; i++) {
-            memory[binToHex(register[28])] = "00000000";
-            register[28] = intToBin(binToInt(register[28]) + 1);
-        }
-        return 0;
-    } else if(instruction[0] === ".byte"){
-        for (i = 1; i < instruction.length; i++) {
-            temp = parseInt(instruction[i]);
-            if(isNaN(temp) || temp === undefined || temp === null) temp = 0;
-            if(temp < MIN_BYTE || temp > MAX_BYTE){ return 0; }
-            memory[binToHex(register[28])] = intToBin(temp).substring(24);
-            register[28] = intToBin(binToInt(register[28]) + 1);
-        }
-        return 0;
-    } else if(instruction[0] === ".half"){
-        for (i = 1; i < instruction.length; i++) {
-            temp = parseInt(instruction[i]);
-            if(isNaN(temp) || temp === undefined || temp === null) temp = 0;
-            if(temp < MIN_16BIT || temp > MAX_16BIT){ return 0; }
-            temp = intToBin(temp);
-            temp = [temp.match(/.{1,8}/g)[2], temp.match(/.{1,8}/g)[3]];
-            memory[binToHex(register[28])] = temp[0];
-            register[28] = intToBin(binToInt(register[28]) + 1);
-            memory[binToHex(register[28])] = temp[1];
-            register[28] = intToBin(binToInt(register[28]) + 1);
-        }
-        return 0;
-    } else if(instruction[0] === ".word"){
-        for (i = 1; i < instruction.length; i++) {
-            temp = parseInt(instruction[i]);
-            if(isNaN(temp) || temp === undefined || temp === null) temp = 0;
-            if(temp < MIN_SINT || temp > MAX_SINT){ return 0; }
-            temp = intToBin(temp).match(/.{1,8}/g);
-            for (var j = 0; j < temp.length; j++) {
-                memory[binToHex(register[28])] = temp[j];
-                register[28] = intToBin(binToInt(register[28]) + 1);
-            }
-        }
         return 0;
     }
 
-    return 1;
+    //Get the functions that check the instruction
+    var check = directives[instruction[0]];
+
+    return check(instruction[1]);
 }
 
 //Parse .text instruction.
 //Returns: 0 - Succesfully parsed, 1 - Unrecognized, 2 - Incorrect label
 function parseText(line){
-    var success = true;
     var i = 0;
 
     //Get the components of the instruction
@@ -228,7 +161,7 @@ function parseText(line){
     //Check the label and store it
     if(label !== -1){
         if(checkLabel(label)){
-            textlabels.push([label, PC]);
+            textlabels.push([label, textEnd]);
         } else {
             return 2;
         }
@@ -241,27 +174,22 @@ function parseText(line){
 
     //Pass if instruction is syscall
     if(instruction[0] === "syscall"){
-        success = true;
+        memory.push(instruction, true);
+        return 0;
     }
 
     //Get the functions that check the instruction
     var checks = operations[instruction[0]];
-    for (i = 0; i < checks.length && success && checks !== undefined; i++) {
+    for (i = 0; i < checks.length && checks !== undefined; i++) {
         if(checks[i](instruction[i+1])){
             success = true;
         } else {
-            success = false;
+            return 1;
         }
     }
 
-    //Add instruction into memory
-    if(success){
-        memory[PC] = instruction;
-        PC = intToHex(hexToInt(PC) + 4);
-        return 0;
-    } else {
-        return 1;
-    }
+    memory.push(instruction, true);
+    return 0;
 }
 
 //Register index

@@ -22,8 +22,7 @@ addi $t0 $t0 16
 addiu $t0 $t0 16
 ori $t0 $t0 16
 run: xori $t0 $t0 16
-run2:
-andi $t0 $t0 16
+run2: andi $t0 $t0 16
 slti $t0 $t0 16
 sltui $t0 $t0 16
 sllv $t0 $t0 $t0
@@ -61,7 +60,7 @@ sra $t0 $t0 5
 srl $t0 $t0 5
 la $t0 test1($t0)
 lb $t0 4($t0)
-lbu $t0 main($t0)
+lbu $t0 test2($t0)
 lh $t0 test4
 lhu $t0 test5
 lw $t0 test6

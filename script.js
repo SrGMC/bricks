@@ -20,11 +20,28 @@ var RI = "";
 var HI = "00000000";
 var LO = "00000000";
 
-var memory = {};
+var memory = {
+    "push": function(data, instruction){
+                if(instruction){
+                    memory[textEnd] = data;
+                    textEnd = intToHex(hexToInt(textEnd) + 4);
+                } else {
+                    if(data.length === 8 || data.length === 16 || data.length === 32){
+                        var temp = data.match(/.{1,8}/g);
+                        for (var i = 0; i < temp.length; i++) {
+                            memory[dataEnd] = temp[i];
+                            dataEnd = intToHex(hexToInt(dataEnd) + 1);
+                        }
+                    } else {
+                        throw "data in memory.push(data, instruction) has an incorrect length";
+                    }
+                }
+            }
+};
 var register = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,hexToBin("10000000"),hexToBin("7fffefff"),hexToBin("7fffefff"),0];
 var textlabels = [];
 var datalabels = [];
-var textEnd = PC;
+var textEnd = "00000000";
 var dataEnd = "10000000";
 
 var last = PC;
@@ -43,7 +60,7 @@ var text = document.getElementById('history').innerHTML;
 //show whole code,
 var settings = [true];
 //Controls if code was succesfully parsed
-var control = true;
+var control;
 
 //Web
 display();
@@ -55,13 +72,15 @@ if (("standalone" in window.navigator) && !window.navigator.standalone){
 }
 
 function showModal(id){
-    document.getElementById(id).style.display = 'flex';
     document.getElementById('modal_background').style.display = 'initial';
+    document.getElementById(id).style.top = '10%';
+    document.getElementById(id).style.bottom = '10%';
 }
 
 function hideModal(id){
-    document.getElementById(id).style.display = 'none';
     document.getElementById('modal_background').style.display = 'none';
+    document.getElementById(id).style.top = '100%';
+    document.getElementById(id).style.bottom = '-200%';
 }
 
 function updateSidebar(){
@@ -74,38 +93,9 @@ function updateSidebar(){
     document.getElementById('sidebar').innerHTML  = "$PC: " + binTo(hexToBin(PC) + "", option) + "<br><br>";
     document.getElementById('sidebar').innerHTML += "$HI: " + binTo(hexToBin(HI) + "", option) + "<br>";
     document.getElementById('sidebar').innerHTML += "$LO: " + binTo(hexToBin(LO) + "", option) + "<br><br>";
-    document.getElementById('sidebar').innerHTML += "$ze: " + binTo(register[0] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$at: " + binTo(register[1] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$v0: " + binTo(register[2] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$v1: " + binTo(register[3] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$a0: " + binTo(register[4] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$a1: " + binTo(register[5] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$a2: " + binTo(register[6] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$a3: " + binTo(register[7] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$t0: " + binTo(register[8] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$t1: " + binTo(register[9] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$t2: " + binTo(register[10] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$t3: " + binTo(register[11] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$t4: " + binTo(register[12] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$t5: " + binTo(register[13] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$t6: " + binTo(register[14] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$t7: " + binTo(register[15] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$s0: " + binTo(register[16] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$s1: " + binTo(register[17] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$s2: " + binTo(register[18] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$s3: " + binTo(register[19] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$s4: " + binTo(register[20] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$s5: " + binTo(register[21] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$s6: " + binTo(register[22] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$s7: " + binTo(register[23] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$t8: " + binTo(register[24] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$t9: " + binTo(register[25] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$k0: " + binTo(register[26] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$k1: " + binTo(register[27] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$gp: " + binTo(register[28] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$sp: " + binTo(register[29] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$fp: " + binTo(register[30] + "", option) + '<br>';
-    document.getElementById('sidebar').innerHTML += "$ra: " + binTo(register[31] + "", option) + '<br>';
+    for (var i = 0; i < registerid.length; i++) {
+        document.getElementById('sidebar').innerHTML += registerid[i][0] + ": " + binTo(register[i] + "", option) + '<br>';
+    }
 }
 
 function display(){
@@ -127,7 +117,27 @@ function clearCode(){
     index = 0;
     datalabels = [];
     textlabels = [];
-    memory = {};
+    textEnd = "00000000";
+    dataEnd = "10000000";
+    memory = {
+        "push": function(data, instruction){
+                    if(instruction){
+                        memory[textEnd] = data;
+                        textEnd = intToHex(hexToInt(textEnd) + 4);
+                    } else {
+                        if(data.length === 8 || data.length === 16 || data.length === 32){
+                            var temp = data.match(/.{1,8}/g);
+                            for (var i = 0; i < temp.length; i++) {
+                                memory[dataEnd] = temp[i];
+                                dataEnd = intToHex(hexToInt(dataEnd) + 1);
+                            }
+                        } else {
+                            throw "data in memory.push(data, instruction) has an incorrect length";
+                        }
+                    }
+                }
+    };
+    control = undefined;
 }
 
 function clearRegisters(){
@@ -136,7 +146,6 @@ function clearRegisters(){
     RI = "";
     HI = "00000000";
     LO = "00000000";
-    textEnd = PC;
 }
 
 function getLabelName(hex){
@@ -150,11 +159,15 @@ function getLabelName(hex){
 }
 
 function showText(){
-    if(control){
+    if(control === undefined){
+        document.getElementById("history").innerHTML = '<i>Welcome to Bricks!, an Open Source MIPS32 simulator.</i><br><br><span style="font-family:helvetica;">Open</span>  &nbsp;Press "Open" to open a new program.<br><img src="assets/run_tutorial.png" height="18px">  &nbsp;&nbsp; Press "Run" to run the whole program.<br><img src="assets/step_tutorial.png" height="18px">  &nbsp;&nbsp; Press "Step" to run the program line by line.<br><img src="assets/clear_tutorial.png" height="18px">  &nbsp;&nbsp; Press "Clear" to clear the registers.<br><img src="assets/clear_code_tutorial.png" height="20px">  &nbsp;&nbsp; Press "Reset" to clear the opened code.<br><br><br>';
+    } else if(control){
         document.getElementById("history").innerHTML = "";
-        for (var i = 0; i <= hexToInt(textEnd); i += 4) {
+        for (var i = 0; i < hexToInt(textEnd); i += 4) {
             document.getElementById("history").innerHTML += '<span class="num">' + getLabelName(intToHex(i)) + (i/4 + 1) + '.</span><span class="code" id="l' + intToHex(i) + '">' + memory[intToHex(i)].join(" ") + "</span><br>";
         }
+    } else {
+        document.getElementById('history').innerHTML = '<br><span style="color: rgb(255,204,0);">An error has occurred while parsing the file. More information is available in the console window.</span> <br>';
     }
 }
 
@@ -301,11 +314,30 @@ function handleFileSelect(evt) {
         //Clear code and memory
         instructions = [];
         index = 0;
-        textlabels = [];
         datalabels = [];
-        memory = {};
+        textlabels = [];
+        textEnd = "00000000";
+        dataEnd = "10000000";
+        memory = {
+            "push": function(data, instruction){
+                        if(instruction){
+                            memory[textEnd] = data;
+                            textEnd = intToHex(hexToInt(textEnd) + 4);
+                        } else {
+                            if(data.length === 8 || data.length === 16 || data.length === 32){
+                                var temp = data.match(/.{1,8}/g);
+                                for (var i = 0; i < temp.length; i++) {
+                                    memory[dataEnd] = temp[i];
+                                    dataEnd = intToHex(hexToInt(dataEnd) + 1);
+                                }
+                            } else {
+                                throw "data in memory.push(data, instruction) has an incorrect length";
+                            }
+                        }
+                    }
+        };
+        control = undefined;
         clearRegisters();
-        document.getElementById("history").innerHTML = "";
 
         //Store the data as an array, replacing trailing whitespace and comments
         instructions = event.target.result.split(/(?:\r\n|\r|\n)/g);
@@ -338,17 +370,11 @@ function handleFileSelect(evt) {
 }
 
 //Parsing and evaluation
-//TODO: Clean up
-//TODO: Move code display into another function
 function parseFile(){
-    //Store PC temporarily. This is used if another file is loaded with an already loaded one
-    var temp = PC;
-    //var temp2 = register[28]; //$gp is not restored
-
-    //Evaluate all .data instructions
-    console.log("Evaluating .data instructions");
+    var status = -1;
+    console.log("Evaluating .data directives");
     for (var i = 0; i < getCodeStart(instructions); i++) {
-        var status = parseData(instructions[i]);
+        status = parseData(instructions[i]);
         if(status === 1){
             document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseData()</i> <strong>Line ' + (1 + i) + "</strong>: " + instructions[i] + " is not a valid instruction. </span><br>";
             control = false;
@@ -361,28 +387,23 @@ function parseFile(){
         }
     }
 
-    console.log("");
-
-    //Evaluate all .text instructions
+    status = -1;
     console.log("Evaluating .text instructions");
-    var index = 1;
-    for (var i = getCodeStart(instructions); i < instructions.length; i++) {
-        var status = parseText(instructions[i]);
+    var codeStart = getCodeStart(instructions);
+    for (var i = codeStart; i < instructions.length; i++) {
+        status = parseText(instructions[i]);
         if(status === 1){
-            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseData()</i> <strong>Line ' + (1 + i) + "</strong>: " + instructions[i] + " is not a valid instruction. </span><br>";
+            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseData()</i> <strong>Line ' + (1 + i + codeStart) + "</strong>: " + instructions[i] + " is not a valid instruction. </span><br>";
             control = false;
         } else if(status === 2){
-            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseData()</i> <strong>Line ' + (1 + i) + "</strong>: " + instructions[i] + " is using an incorrect label. </span><br>";
+            document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseData()</i> <strong>Line ' + (1 + i + codeStart) + "</strong>: " + instructions[i] + " is using an incorrect label. </span><br>";
             control = false;
         }
     }
     document.getElementById("history").innerHTML += "\n";
-
-    //Restore everything and store the end address of the code
-    textEnd = intToHex(hexToInt(PC) - 4);
-    dataEnd = binToHex(register[28]);
-    PC = temp;
-    text = document.getElementById("history").innerHTML;
+    if(control === undefined){
+        control = true;
+    }
 }
 
 //Run
