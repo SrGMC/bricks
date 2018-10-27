@@ -2,6 +2,17 @@
     ALU
  */
 
+//Constants
+const MAX_UINT = Math.pow(2, 32) - 1;
+const MAX_SINT = Math.pow(2, 31) - 1;
+const MIN_UINT = 0;
+const MIN_SINT = -Math.pow(2, 31);
+const MAX_5BIT = Math.pow(2, 5) - 1;
+const MAX_16BIT = Math.pow(2, 15) - 1;
+const MIN_16BIT = -Math.pow(2, 15);
+const MAX_BYTE = Math.pow(2, 7) - 1;
+const MIN_BYTE = -Math.pow(2, 7);
+
 //AND
 function and(src1, src2){
     src1 = src1.split("");

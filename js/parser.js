@@ -3,12 +3,6 @@
  */
 
 //Constants
-const MAX_5BIT = Math.pow(2, 5) - 1;
-const MAX_16BIT = Math.pow(2, 15) - 1;
-const MIN_16BIT = -Math.pow(2, 15);
-const MAX_BYTE = Math.pow(2, 7) - 1;
-const MIN_BYTE = -Math.pow(2, 7);
-
 const registerid = [["$zero", "$0"], ["$at", "$1"], ["$v0", "$2"], ["$v1","$3"],
 ["$a0", "$4"], ["$a1", "$5"], ["$a2", "$6"], ["$a3", "$7"], ["$t0","$8"],
 ["$t1", "$9"], ["$t2", "$10"], ["$t3", "$11"], ["$t4", "$12"], ["$t5","$13"],
