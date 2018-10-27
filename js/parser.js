@@ -45,18 +45,26 @@ function getCodeStart(code){
     return index;
 }
 
-function labelExists(label){
-    for (var i = 0; i < textlabels.length; i++) {
-        if(textlabels[i][0] === label){
-            return true;
-        }
-    }
+function labelDataExists(label){
     for (var i = 0; i < datalabels.length; i++) {
         if(datalabels[i][0] === label){
             return true;
         }
     }
     return false;
+}
+
+function labelTextExists(label){
+    for (var i = 0; i < textlabels.length; i++) {
+        if(textlabels[i][0] === label){
+            return true;
+        }
+    }
+    return false;
+}
+
+function labelExists(label){
+    return labelDataExists(label) || labelTextExists(label);
 }
 
 //Checks that the string is ASCII
@@ -173,7 +181,7 @@ function parseText(line){
     }
 
     //Get the functions that check the instruction
-    var checks = operations[instruction[0]];
+    var checks = operations[instruction[0]].check;
     for (i = 0; i < checks.length && checks !== undefined; i++) {
         if(checks[i](instruction[i+1])){
             success = true;

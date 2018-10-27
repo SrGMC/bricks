@@ -15,7 +15,7 @@ if (cache.status == cache.UPDATEREADY) { cache.swapCache(); }
  */
 //PC and IR
 var PC = "00000000";
-var RI = [];
+var IR = [];
 
 //High and Low registers
 var HI = "00000000";
@@ -97,9 +97,11 @@ function clearCode(){
 function clearRegisters(){
     register = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,hexToBin("10000000"),hexToBin("7fffefff"),hexToBin("7fffefff"),0];
     PC = "00000000";
-    RI = "";
+    IR = [];
     HI = "00000000";
     LO = "00000000";
+
+    last = PC;
 }
 
 /*
@@ -262,9 +264,14 @@ function run() {
         document.getElementById("l" + last).classList.remove("run");
 
         //Run each of them
-        for (var i = hexToInt(PC); i <= max; i += 4) {
-            decode(memory[PC]);
-            PC = intToHex(hexToInt(PC) + 4);
+        for (var i = hexToInt(PC); i < max; i += 4) {
+            //Decode and run instruction
+            var status = decode();
+            if (!status) {
+                document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Error</strong>: An error has occurred while running ' + memory[intToHex(hexToInt(PC) - 4)].join(" ") + '<br>';
+                control = false;
+                break;
+            }
         }
     }
 }
@@ -276,15 +283,19 @@ function step() {
         var max = Math.min(hexToInt("0fffffff", true), hexToInt(textEnd, true));
 
         //Run one if we have not reached the maximum
-        if(hexToInt(PC) <= max){
+        if(hexToInt(PC) < max){
 
             //Highlight currently running instruction
             document.getElementById("l" + last).classList.remove("run");
             document.getElementById("l" + PC).classList.add("run");
             last = PC;
 
-            decode(memory[PC]);
-            PC = intToHex(hexToInt(PC) + 4);
+            //Decode and run instruction
+            var status = decode();
+            if (!status) {
+                document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><strong>Error</strong>: An error has occurred while running ' + memory[intToHex(hexToInt(PC) - 4)].join(" ") + '<br>';
+                control = false;
+            }
         } else {
             document.getElementById("l" + last).classList.remove("run");
             document.getElementById("output").innerHTML += '<span style="color: rgb(255, 204, 0);"><strong>Warning</strong>: Reached end of code. Stopping. <br>';

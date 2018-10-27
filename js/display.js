@@ -64,6 +64,15 @@ function getLabelName(hex){
 
     return "";
 }
+function getLabelDir(label){
+    for (var i = 0; i < textlabels.length; i++) {
+        if(textlabels[i][0] === label){
+            return textlabels[i][1];
+        }
+    }
+
+    return -1;
+}
 
 //Returns the hexadecimal value of the given position in memory
 function dataHex(pos){
@@ -92,7 +101,7 @@ function showText(){
             document.getElementById("history").innerHTML += '<span class="num">' + getLabelName(intToHex(i)) + (i/4 + 1) + '.</span><span class="code" id="l' + intToHex(i) + '">' + memory[intToHex(i)].join(" ") + "</span><br>";
         }
     } else {
-        document.getElementById('history').innerHTML = '<br><span style="color: rgb(255,204,0);">An error has occurred while parsing the file. More information is available in the console window.</span> <br>';
+        document.getElementById('history').innerHTML = '<br><span style="color: rgb(255,59,48);">An error has occurred. More information is available in the console window down below.</span> <br>';
     }
 }
 
