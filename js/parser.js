@@ -21,6 +21,7 @@ function splitter(line){
     //Get the instruction, split it and remove empty whitespaces
     var instruction = line.match(/(?!(\w+:))[^:\s].+/g);
     instruction = (instruction !== null) ? instruction[0].replace(/,/g, " ").split(" ").filter(function(v){return v!==''}) : -1;
+    dirkeys = Object.keys(directives);
     if(directives[instruction[0]] !== undefined){
         var array = [];
         for (var i = 1; i < instruction.length; i++) {
@@ -140,14 +141,18 @@ function parseData(line){
     }
 
     //Pass if .data
-    if(instruction[0] === ".data"){
+    if(instruction[0] === ".data" || instruction[0] === ".globl"){
         return 0;
     }
 
     //Get the functions that check the instruction
     var check = directives[instruction[0]];
 
-    return check(instruction[1]);
+    try{
+        return check(instruction[1]);
+    }catch(err){
+        return 1;
+    }
 }
 
 //Parse .text instruction.
@@ -181,7 +186,12 @@ function parseText(line){
     }
 
     //Get the functions that check the instruction
-    var checks = operations[instruction[0]].check;
+    var checks;
+    try{
+        checks = operations[instruction[0]].check;
+    } catch(e){
+        document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseData()</i> " + line + " is not a valid instruction. </span><br>";
+    }
     for (i = 0; i < checks.length && checks !== undefined; i++) {
         if(checks[i](instruction[i+1])){
             success = true;

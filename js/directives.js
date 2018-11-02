@@ -29,6 +29,13 @@ var dirSpace = function(arr){
 };
 var dirByte = function(arr){
     for (var i = 0; i < arr.length; i++) {
+        if(arr[i].indexOf("'") !== -1){
+            arr[i].replace("'", "").replace("'", "");
+            if(!isASCII(arr[i])){
+                return 3;
+            }
+            arr[i] = arr[i].charCodeAt(0);
+        }
         temp = parseInt(arr[i]);
         if(isNaN(temp) || temp === undefined || temp === null) return 1;
         if(temp < MIN_BYTE || temp > MAX_BYTE){ return 1; }
@@ -38,6 +45,13 @@ var dirByte = function(arr){
 };
 var dirHalf = function(arr){
     for (var i = 0; i < arr.length; i++) {
+        if(arr[i].indexOf("'") !== -1){
+            arr[i].replace("'", "").replace("'", "");
+            if(!isASCII(arr[i])){
+                return 3;
+            }
+            arr[i] = arr[i].charCodeAt(0);
+        }
         temp = parseInt(arr[i]);
         if(isNaN(temp) || temp === undefined || temp === null) return 1;
         if(temp < MIN_16BIT || temp > MAX_16BIT){ return 1; }
@@ -47,6 +61,13 @@ var dirHalf = function(arr){
 };
 var dirWord = function(arr){
     for (var i = 0; i < arr.length; i++) {
+        if(arr[i].indexOf("'") !== -1){
+            arr[i].replace("'", "").replace("'", "");
+            if(!isASCII(arr[i])){
+                return 3;
+            }
+            arr[i] = arr[i].charCodeAt(0);
+        }
         temp = parseInt(arr[i]);
         if(isNaN(temp) || temp === undefined || temp === null) return 1;
         if(temp < MIN_SINT || temp > MAX_SINT){ return 1; }
