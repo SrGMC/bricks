@@ -190,7 +190,7 @@ function parseText(line){
     try{
         checks = operations[instruction[0]].check;
     } catch(e){
-        document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseData()</i> " + line + " is not a valid instruction. </span><br>";
+        document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseData()</i> " + line + " is not a valid instruction. </span><br>';
     }
     for (i = 0; i < checks.length && checks !== undefined; i++) {
         if(checks[i](instruction[i+1])){
