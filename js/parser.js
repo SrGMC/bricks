@@ -189,15 +189,15 @@ function parseText(line){
     var checks;
     try{
         checks = operations[instruction[0]].check;
-    } catch(e){
-        document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseData()</i> " + line + " is not a valid instruction. </span><br>';
-    }
-    for (i = 0; i < checks.length && checks !== undefined; i++) {
-        if(checks[i](instruction[i+1])){
-            success = true;
-        } else {
-            return 1;
+        for (i = 0; i < checks.length && checks !== undefined; i++) {
+            if(checks[i](instruction[i+1])){
+                success = true;
+            } else {
+                return 1;
+            }
         }
+    } catch(e){
+        document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseData()</i> ' + line + ' is not a valid instruction. </span><br>';
     }
 
     memory.push(instruction, true);
