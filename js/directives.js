@@ -30,7 +30,7 @@ var dirSpace = function(arr){
 var dirByte = function(arr){
     for (var i = 0; i < arr.length; i++) {
         if(arr[i].indexOf("'") !== -1){
-            arr[i].replace("'", "").replace("'", "");
+            arr[i] = arr[i].replace(/'/g, "")
             if(!isASCII(arr[i])){
                 return 3;
             }
@@ -46,7 +46,7 @@ var dirByte = function(arr){
 var dirHalf = function(arr){
     for (var i = 0; i < arr.length; i++) {
         if(arr[i].indexOf("'") !== -1){
-            arr[i].replace("'", "").replace("'", "");
+            arr[i] = arr[i].replace(/'/g, "")
             if(!isASCII(arr[i])){
                 return 3;
             }
@@ -62,7 +62,7 @@ var dirHalf = function(arr){
 var dirWord = function(arr){
     for (var i = 0; i < arr.length; i++) {
         if(arr[i].indexOf("'") !== -1){
-            arr[i].replace("'", "").replace("'", "");
+            arr[i] = arr[i].replace(/'/g, "")
             if(!isASCII(arr[i])){
                 return 3;
             }

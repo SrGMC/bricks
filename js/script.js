@@ -193,7 +193,7 @@ function handleFileSelect(evt) {
         for (var i = 0; i < instructions.length; i++) {
             instructions[i] = instructions[i].replace(/\s{2,}/g, "");
             instructions[i] = instructions[i].replace(/\t{1,}/g, "");
-            instructions[i] = instructions[i].replace(/#.+/g, "");
+            instructions[i] = instructions[i].replace(/(#.+)|#/g, "");
         }
         instructions = instructions.filter(function(v){return v !== ''});
 

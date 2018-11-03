@@ -97,6 +97,9 @@ function checkDir(dir){
         return ((hexToInt(10000000) <= hexToInt(dir)) && (hexToInt(dir) <= hexToInt(dataEnd))) ? 0 : -1;
     } else if(dir.indexOf("(") !== -1) {
         var reg = insReg(dir.substring(dir.indexOf("$"), dir.length-1));
+        if(dir.match(/\B\(\$..\)/g) !== null){
+            return 1;
+        }
         var value = parseInt(dir);
         if(value === null || value === undefined || isNaN(value)){
             value = false;
@@ -119,6 +122,54 @@ function checkDir(dir){
         }
         return -1;
     }
+}
+
+//Returns the address.
+//Returns: -1 if it's not recognized, 0 for hex, 1 for value($reg), 2 for label($reg), 3 for label
+function getDir(dir){
+    var result = [];
+    if(isHex(dir)){
+        dir = dir.replace("0x", "");
+        return ((hexToInt(10000000) <= hexToInt(dir)) && (hexToInt(dir) <= hexToInt(dataEnd))) ? dir : -1;
+    } else if(dir.indexOf("(") !== -1) {
+        var reg = insReg(dir.substring(dir.indexOf("$"), dir.length-1));
+        result[1] = dir.substring(dir.indexOf("$"), dir.length-1);
+        if(dir.match(/\B\(\$..\)/g) !== null){
+            result[0] = 0;
+            return result;
+        }
+        var value = parseInt(dir);
+        console.log(value);
+        if(value === null || value === undefined || isNaN(value)){
+            value = false;
+            var label = dir.substring(0, dir.indexOf("("));
+            for (var i = 0; i < datalabels.length; i++) {
+                if(datalabels[i][0] === label){
+                    value = true;
+                    break;
+                }
+            }
+            if (value && reg){
+                result[0] = label;
+            } else {
+                result = -1;
+            }
+        } else {
+            if (typeof value === 'number' && reg){
+                result[0] = value;
+            }
+            else{ result = -1; }
+        }
+
+    } else {
+        if(labelDataExists(dir)){
+            result = dir;
+        } else {
+            result = -1;
+        }
+    }
+
+    return result;
 }
 
 //Parse .data instruction
@@ -197,7 +248,7 @@ function parseText(line){
             }
         }
     } catch(e){
-        document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseData()</i> ' + line + ' is not a valid instruction. </span><br>';
+        return 1;
     }
 
     memory.push(instruction, true);
