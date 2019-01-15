@@ -1,7 +1,7 @@
 .data
     test1: .ascii "Test1"
     test2: .asciiz "Test2"
-    test3: .byte -1, 1
+    test3: .byte -1, '1'
     test4: .half -1, 1
     test5: .word -1, 1
     test6: .space 3
@@ -18,8 +18,8 @@ bleu $t0 $t0 main
 blt $t0 $t0 main
 bltu $t0 $t0 main
 bne $t0 $t0 main
-addi $t0 $t0 16
-addiu $t0 $t0 16
+addi $t0 $t0 '1'
+addiu $t0 $t0 0xFF
 ori $t0 $t0 16
 run: xori $t0 $t0 16
 run2: andi $t0 $t0 16

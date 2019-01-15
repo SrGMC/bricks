@@ -1,4 +1,4 @@
-//TODO: Functions that checks the directives
+//TODO: Set of functions that parse assembly directives
 function dirText(text, z){
     text = text.join(" ").replace('\"', "").replace('\"', "");
     if(!isASCII(text)){
@@ -12,7 +12,7 @@ function dirText(text, z){
         memory.push("00000000", false);
     }
     return 0;
-};
+}
 var dirASCIIZ = function(text){
     return dirText(text, true);
 };
@@ -30,7 +30,7 @@ var dirSpace = function(arr){
 var dirByte = function(arr){
     for (var i = 0; i < arr.length; i++) {
         if(arr[i].indexOf("'") !== -1){
-            arr[i] = arr[i].replace(/'/g, "")
+            arr[i] = arr[i].replace(/'/g, "");
             if(!isASCII(arr[i])){
                 return 3;
             }
@@ -46,7 +46,7 @@ var dirByte = function(arr){
 var dirHalf = function(arr){
     for (var i = 0; i < arr.length; i++) {
         if(arr[i].indexOf("'") !== -1){
-            arr[i] = arr[i].replace(/'/g, "")
+            arr[i] = arr[i].replace(/'/g, "");
             if(!isASCII(arr[i])){
                 return 3;
             }
@@ -62,7 +62,7 @@ var dirHalf = function(arr){
 var dirWord = function(arr){
     for (var i = 0; i < arr.length; i++) {
         if(arr[i].indexOf("'") !== -1){
-            arr[i] = arr[i].replace(/'/g, "")
+            arr[i] = arr[i].replace(/'/g, "");
             if(!isASCII(arr[i])){
                 return 3;
             }

@@ -239,6 +239,7 @@ function parseFile(){
     console.log("Evaluating .text instructions");
     var codeStart = getCodeStart(instructions);
     for (var i = codeStart; i < instructions.length; i++) {
+        console.log(splitter(instructions[i]));
         status = parseText(instructions[i]);
         if(status === 1){
             document.getElementById("output").innerHTML += '<span style="color: rgb(255,59,48);"><i>parseData()</i> <strong>Line ' + (1 + i + codeStart) + "</strong>: " + instructions[i] + " is not a valid instruction. </span><br>";

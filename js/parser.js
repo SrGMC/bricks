@@ -20,7 +20,7 @@ function splitter(line){
 
     //Get the instruction, split it and remove empty whitespaces
     var instruction = line.match(/(?!(\w+:))[^:\s].+/g);
-    instruction = (instruction !== null) ? instruction[0].replace(/,/g, " ").split(" ").filter(function(v){return v!==''}) : -1;
+    instruction = (instruction !== null) ? instruction[0].replace(/,/g, " ").split(" ").filter(function(v){return v !==''}) : -1;
     dirkeys = Object.keys(directives);
     if(directives[instruction[0]] !== undefined){
         var array = [];
@@ -29,6 +29,10 @@ function splitter(line){
         }
         instruction.splice(1);
         instruction.push(array);
+    }
+
+    if(instruction[instruction.length-1].indexOf("'") !== -1){
+        instruction[instruction.length-1] = instruction[instruction.length-1].replace(/'/g, "").charCodeAt(0) + '';
     }
 
     return [label, instruction];
@@ -127,42 +131,27 @@ function checkDir(dir){
 //Returns the address.
 //Returns: -1 if it's not recognized, 0 for hex, 1 for value($reg), 2 for label($reg), 3 for label
 function getDir(dir){
-    var result = [];
+    var result = [0, ""];
     if(isHex(dir)){
         dir = dir.replace("0x", "");
         return ((hexToInt(10000000) <= hexToInt(dir)) && (hexToInt(dir) <= hexToInt(dataEnd))) ? dir : -1;
-    } else if(dir.indexOf("(") !== -1) {
+    } else if (dir.indexOf("(") === 0){
+        result = [0, dir.substring(dir.indexOf("$"), dir.length-1)];
+    } else if (dir.indexOf("(") !== -1) {
         var reg = insReg(dir.substring(dir.indexOf("$"), dir.length-1));
         result[1] = dir.substring(dir.indexOf("$"), dir.length-1);
-        if(dir.match(/\B\(\$..\)/g) !== null){
-            result[0] = 0;
-            return result;
-        }
-        var value = parseInt(dir);
-        console.log(value);
-        if(value === null || value === undefined || isNaN(value)){
-            value = false;
-            var label = dir.substring(0, dir.indexOf("("));
-            for (var i = 0; i < datalabels.length; i++) {
-                if(datalabels[i][0] === label){
-                    value = true;
-                    break;
-                }
-            }
-            if (value && reg){
-                result[0] = label;
-            } else {
-                result = -1;
-            }
+        var value = dir.substring(0, dir.indexOf("("));
+        if(/^([0-9]{1,})$/.test(value)){
+            result[0] = (isNaN(parseInt(value))) ? 0 : parseInt(value);
+        } else if(labelExists(value)) {
+            result[0] = value;
         } else {
-            if (typeof value === 'number' && reg){
-                result[0] = value;
-            }
-            else{ result = -1; }
+            return -1;
         }
-
     } else {
         if(labelDataExists(dir)){
+            result = dir;
+        } else if(labelTextExists(dir)) {
             result = dir;
         } else {
             result = -1;
