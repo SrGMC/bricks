@@ -95,7 +95,7 @@ function checkLabel(label){
 
 //Returns the addressing type.
 //Returns: -1 if it's not recognized, 0 for hex, 1 for value($reg), 2 for label($reg), 3 for label
-function checkDir(dir){
+/*function checkDir(dir){
     if(isHex(dir)){
         dir = dir.replace("0x", "");
         return ((hexToInt(10000000) <= hexToInt(dir)) && (hexToInt(dir) <= hexToInt(dataEnd))) ? 0 : -1;
@@ -126,6 +126,38 @@ function checkDir(dir){
         }
         return -1;
     }
+}*/
+
+function checkDir(dir){
+    var result;
+    if(isHex(dir)){
+        dir = dir.replace("0x", "");
+        return ((hexToInt(10000000) <= hexToInt(dir)) && (hexToInt(dir) <= hexToInt(dataEnd))) ? 0 : -1;
+    } else if (dir.indexOf("(") === 0){
+        result = 1;
+    } else if (dir.indexOf("(") !== -1) {
+        if(!insReg(dir.substring(dir.indexOf("$"), dir.length-1))){
+            return -1;
+        };
+        var value = dir.substring(0, dir.indexOf("("));
+        if(/^([0-9]{1,})$/.test(value)){
+            result = 1;
+        } else if(labelExists(value)) {
+            result = 2;
+        } else {
+            return -1;
+        }
+    } else {
+        if(labelDataExists(dir)){
+            result = 3;
+        } else if(labelTextExists(dir)) {
+            result = 3;
+        } else {
+            result = -1;
+        }
+    }
+
+    return result;
 }
 
 //Returns the address.

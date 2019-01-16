@@ -41,8 +41,8 @@ var insDir = function (dir){
 
 const operations = {
     "beq": {"check": [insReg, insReg, insLabel], "run": beq},
-    "bge": {"check": [insReg, insReg, insLabel], "run": []},
-    "bgeu": {"check": [insReg, insReg, insLabel], "run": []},
+    "bge": {"check": [insReg, insReg, insLabel], "run": bge},
+    "bgeu": {"check": [insReg, insReg, insLabel], "run": bgeu},
     "bgt": {"check": [insReg, insReg, insLabel], "run": []},
     "bgtu": {"check": [insReg, insReg, insLabel], "run": []},
     "ble": {"check": [insReg, insReg, insLabel], "run": []},

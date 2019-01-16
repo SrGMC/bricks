@@ -16,20 +16,52 @@ function decode(){
 }
 
 var beq = function(params){
-    var o = 1;
-    var r1 = getRegisterId(params[o+0]);
-    var r2 = getRegisterId(params[o+1]);
-    if(!labelTextExists(params[o+2])){
-        return false;
-    }
-    var dir;
-    if(isHex(params[o+2])){
-        dir = params[o+2].replace("0x", "");
+    var cop = params[0];
+    var r1 = binToInt(register[getRegisterId(params[1])]);
+    var r2 = binToInt(register[getRegisterId(params[2])]);
+    var dir = params[3];
+
+    if(isHex(dir)){
+        dir = dir.replace("0x", "");
     } else {
-        dir = getLabelDir(params[o+2]);
+        dir = getTextLabelDir(dir);
     }
 
-    if(register[r1] === register[r2]){
+    if(r1 === r2){
+        PC = dir;
+    }
+    return true;
+};
+
+var bge = function(params){
+    var cop = params[0];
+    var r1 = binToInt(register[getRegisterId(params[1])]);
+    var r2 = binToInt(register[getRegisterId(params[2])]);
+    var dir = params[3];
+    if(isHex(dir)){
+        dir = dir.replace("0x", "");
+    } else {
+        dir = getTextLabelDir(dir);
+    }
+
+    if(r1 >= r2){
+        PC = dir;
+    }
+    return true;
+};
+
+var bgeu = function(params){
+    var cop = params[0];
+    var r1 = binToInt(register[getRegisterId(params[1])]);
+    var r2 = binToInt(register[getRegisterId(params[2])]);
+    var dir = params[3];
+    if(isHex(dir)){
+        dir = dir.replace("0x", "");
+    } else {
+        dir = getTextLabelDir(dir);
+    }
+
+    if(Matg.abs(r1) >= Math.abs(r2)){
         PC = dir;
     }
     return true;

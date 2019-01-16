@@ -74,6 +74,26 @@ function getLabelDir(label){
     return -1;
 }
 
+function getTextLabelDir(label){
+    for (var i = 0; i < textlabels.length; i++) {
+        if(textlabels[i][0] === label){
+            return textlabels[i][1];
+        }
+    }
+
+    return -1;
+}
+
+function getDataLabelDir(label){
+    for (var i = 0; i < datalabels.length; i++) {
+        if(datalabels[i][0] === label){
+            return datalabels[i][1];
+        }
+    }
+
+    return -1;
+}
+
 //Returns the hexadecimal value of the given position in memory
 function dataHex(pos){
     var result = binToHex(memory[intToHex(pos)]);
@@ -106,6 +126,7 @@ function showText(){
 }
 
 //Shows the .data segment in memory of the file
+//This is a little bit bad. But works.
 function showData(){
     document.getElementById("history").innerHTML = "[ User data segment&nbsp; ]<br>";
     var offset = hexToInt("10000000");
