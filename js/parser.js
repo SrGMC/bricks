@@ -133,10 +133,6 @@ function parseInstr(instruction){
     instruction = instruction.replace(/^\s+|\s+$/g,'');
     instruction = instruction.toUpperCase();
 
-    // Labels           /[a-zA-Z]+:/g
-    // I-Type with dec  /([a-zA-Z]{2,7}) (\$\w{2,4}) (\$\w{2,4}) ([0-9]{1,5})/g
-    // I-Type with hex  /([a-zA-Z]{2,7}) (\$\w{2,4}) (\$\w{2,4}) (0x[0-9a-fA-F]{1,4})/g
-    // I-Type with char /([a-zA-Z]{2,7}) (\$\w{2,4}) (\$\w{2,4}) ('.')/g
     var label = /[a-zA-Z]+:/g.exec(instruction);
     instruction = matchInstruction(instruction);
     
@@ -153,12 +149,18 @@ function parseInstr(instruction){
     var ins;
 
     // Step 2: Parse each part
-    if (type === "i-type-dec"){
-        if (parts[4] > 65535) { return null; }
+    if (type.includes("i-type")){
+        var immediate = 0; 
+        switch (type){
+            case "i-type-dec": immediate = parts[4]; break;
+            case "i-type-hex": immediate = parseInt(parts[4], 16); break;
+            case "i-type-char": immediate = parts[4].charCodeAt(1); break;
+        }
+        if (immediate > 65535) throw "Invalid instruction";
         binary = opcode << 26 | 
             (getRegisterId(parts[2], false) << 21) | 
             (getRegisterId(parts[3], false) << 16) | 
-            parts[4];
+            immediate;
     } else if (type === "i-type-hex"){
         if (parseInt(parts[4], 16) > 65535) { return null; }
         binary = opcode << 26 | 
