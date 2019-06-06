@@ -96,6 +96,9 @@ function getRegisterMnemonic(i){
     if (typeof(i) === 'string'){
         i = i.replace("$", "");
     }
+    if (registers[i] === undefined) {
+        throw "Invalid register " + i;
+    }
     return registers[i].toUpperCase();
 }
 
@@ -115,7 +118,7 @@ function getRegisterId(register, dollarSign){
         }
     }
 
-    return -1;
+    throw "Invalid register " + register;
 }
 
 function parseContents(){
@@ -137,55 +140,60 @@ function parseInstr(instruction){
     var label = /[a-zA-Z]+:/g.exec(instruction);
     instruction = matchInstruction(instruction);
     
-    if(instruction === null) return null;
+    if(instruction === null) throw "Invalid instruction";
 
     var type = instruction[0];
     var parts = instruction[1];
+
+    var opcode = instructions[parts[1]];
+    if(opcode === undefined) throw "Invalid instruction";
+
+    //console.log(type);
 
     var ins;
 
     // Step 2: Parse each part
     if (type === "i-type-dec"){
         if (parts[4] > 65535) { return null; }
-        binary = instructions[parts[1]] << 26 | 
+        binary = opcode << 26 | 
             (getRegisterId(parts[2], false) << 21) | 
             (getRegisterId(parts[3], false) << 16) | 
             parts[4];
     } else if (type === "i-type-hex"){
         if (parseInt(parts[4], 16) > 65535) { return null; }
-        binary = instructions[parts[1]] << 26 | 
+        binary = opcode << 26 | 
             (getRegisterId(parts[2], false) << 21) | 
             (getRegisterId(parts[3], false) << 16) | 
             parseInt(parts[4], 16);
     } else if (type === "i-type-char"){
         if (parts[4].charCodeAt(1) > 65535) { return null; }
-        binary = instructions[parts[1]] << 26 | 
+        binary = opcode << 26 | 
             (getRegisterId(parts[2], false) << 21) | 
             (getRegisterId(parts[3], false) << 16) | 
             parts[4].charCodeAt(1);
     } else if (type === "r-type-shift"){
         if (parts[4] > 31) { return null; }
-        ins = instructions[parts[1]];
+        ins = opcode;
         binary = ins[0] << 26 | 
             (getRegisterId(parts[2], false) << 16) | 
             (getRegisterId(parts[3], false) << 11) | 
             parts[4] << 6 |
             ins[1];
     } else if (type === "r-type-triple"){
-        ins = instructions[parts[1]];
+        ins = opcode;
         binary = ins[0] << 26 | 
             (getRegisterId(parts[2], false) << 21) | 
             (getRegisterId(parts[3], false) << 16) |
             (getRegisterId(parts[4], false) << 11) |  
             ins[1];
     }  else if (type === "r-type-double"){
-        ins = instructions[parts[1]];
+        ins = opcode;
         binary = ins[0] << 26 | 
             (getRegisterId(parts[2], false) << 21) | 
             (getRegisterId(parts[3], false) << 16) |
             ins[1];
     }  else if (type === "r-type-single"){
-        ins = instructions[parts[1]];
+        ins = opcode;
         binary = ins[0] << 26 | 
             (getRegisterId(parts[2], false) << 21) | 
             ins[1];
@@ -224,4 +232,5 @@ function pad(n, width, z) {
     return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
 }
 
-console.log(pad((parseInstr("srl $t0 $t0 5")[1] >>> 0).toString(2), 32, 0));
+console.log(pad((parseInstr("ADD $t0 $t0 5")[1] >>> 0).toString(2), 32, 0));
+console.log(getRegisterMnemonic(32));
