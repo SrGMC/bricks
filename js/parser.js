@@ -2,286 +2,159 @@
     Parser
  */
 
+var memory = [];
+var labels = {};
+
 //Constants
-const registerid = [["$zero", "$0"], ["$at", "$1"], ["$v0", "$2"], ["$v1","$3"],
-["$a0", "$4"], ["$a1", "$5"], ["$a2", "$6"], ["$a3", "$7"], ["$t0","$8"],
-["$t1", "$9"], ["$t2", "$10"], ["$t3", "$11"], ["$t4", "$12"], ["$t5","$13"],
-["$t6", "$14"], ["$t7", "$15"], ["$s0", "$16"], ["$s1", "$17"], ["$s2","$18"],
-["$s3", "$19"], ["$s4", "$20"], ["$s5", "$21"], ["$s6", "$22"], ["$s7","$23"],
-["$t8", "$24"], ["$t9", "$25"], ["$k0", "$26"], ["$k1", "$27"], ["$gp","$28"],
-["$sp", "$29"], ["$fp", "$30"], ["$ra", "$31"]];
+const registers = {
+	0: "$zero", 
+	1: "$at", 
+	2: "$v0", 
+	3: "$v1", 
+	4: "$a0", 
+	5: "$a1", 
+	6: "$a2", 
+	7: "$a3", 
+	8: "$t0", 
+	9: "$t1", 
+	10: "$t2", 
+	11: "$t3", 
+	12: "$t4", 
+	13: "$t5", 
+	14: "$t6", 
+	15: "$t7", 
+	16: "$s0", 
+	17: "$s1", 
+	18: "$s2", 
+	19: "$s3", 
+	20: "$s4", 
+	21: "$s5", 
+	22: "$s6", 
+	23: "$s7", 
+	24: "$t8", 
+	25: "$t9", 
+	26: "$k0", 
+	27: "$k1", 
+	28: "$gp", 
+	29: "$sp", 
+	30: "$fp", 
+	31: "$ra"
+};
 
-//Splits the given line into an array.
-//Returns: Array: [0] - Label (-1 if there isn't one), [1] - Instruction array (-1 if there isn't one)
-function splitter(line){
-    //Get label
-    var label = line.match(/(\w+):/g);
-    label = (label !== null) ? label[0].replace(":", "") : -1;
+const instructions = {
+	"ADDI": 8,
+	"ADDIU": 9,
+	"SLTI": 10,
+	"SLTIU": 11,
+	"ANDI": 12,
+	"ORI": 13,
+	"XORI": 14,
+	"LUI": 15
+};
 
-    //Get the instruction, split it and remove empty whitespaces
-    var instruction = line.match(/(?!(\w+:))[^:\s].+/g);
-    instruction = (instruction !== null) ? instruction[0].replace(/,/g, " ").split(" ").filter(function(v){return v !==''}) : -1;
-    dirkeys = Object.keys(directives);
-    if(directives[instruction[0]] !== undefined){
-        var array = [];
-        for (var i = 1; i < instruction.length; i++) {
-            array.push(instruction[i]);
-        }
-        instruction.splice(1);
-        instruction.push(array);
-    }
+const regex = {
+	"i-type-dec": /([a-zA-Z]{2,7}) (\$.{2,4}) (\$.{2,4}) ([0-9]{1,5})/g,
+	"i-type-hex": /([a-zA-Z]{2,7}) (\$.{2,4}) (\$.{2,4}) (0x[0-9a-fA-F]{1,4})/g,
+	"i-type-char": /([a-zA-Z]{2,7}) (\$.{2,4}) (\$.{2,4}) ('.')/g
+};
 
-    if(instruction[instruction.length-1].indexOf("'") !== -1){
-        instruction[instruction.length-1] = instruction[instruction.length-1].replace(/'/g, "").charCodeAt(0) + '';
-    }
-
-    return [label, instruction];
+/*
+ * Get the mnemonic name of the register (including $)
+ * i: Number of the register (with or without preceding $)
+ * returns: register mnemonic name
+ */
+function getRegisterMnemonic(i){
+	if (typeof(i) === 'string'){
+		i = i.replace("$", "");
+	}
+	return registers[i];
 }
 
-//Get the starting line of the code
-function getCodeStart(code){
-    var index = 0;
-    for (var i = 0; i < code.length; i++) {
-        if(code[i].indexOf(".text") !== -1){
-            index = i;
-            break;
-        }
-    }
-    return index;
+/*
+ * Get the register id from the mnemonic name
+ * i: Register mnemonic
+ * dollaSign: true or false. Appends a $ before the id
+ * returns: register id
+ */
+function getRegisterId(register, dollarSign){
+	var keys = Object.keys(registers);
+	for (var i = keys.length - 1; i >= 0; i--) {
+		var key = keys[i];
+		if(registers[key] === register || ("$" + keys[i]) === "register"){
+			return dollarSign ? "$" + key : key;
+		}
+	}
+
+	return -1;
 }
 
-function labelDataExists(label){
-    for (var i = 0; i < datalabels.length; i++) {
-        if(datalabels[i][0] === label){
-            return true;
-        }
-    }
-    return false;
+function parseContents(){
+
 }
 
-function labelTextExists(label){
-    for (var i = 0; i < textlabels.length; i++) {
-        if(textlabels[i][0] === label){
-            return true;
-        }
-    }
-    return false;
+// TODO
+function parseInstr(instruction){
+	var binary = 0;
+	// Step 1: Split instruction in parts
+	// Remove trailing whitespace
+	instruction = instruction.replace(/^\s+|\s+$/g,'');
+
+	// Labels           /[a-zA-Z]+:/g
+	// I-Type with dec  /([a-zA-Z]{2,7}) (\$.{2,4}) (\$.{2,4}) ([0-9]{1,5})/g
+	// I-Type with hex  /([a-zA-Z]{2,7}) (\$.{2,4}) (\$.{2,4}) (0x[0-9a-fA-F]{1,4})/g
+	// I-Type with char /([a-zA-Z]{2,7}) (\$.{2,4}) (\$.{2,4}) ('.')/g
+	label = /[a-zA-Z]+:/g.exec(instruction);
+	instruction = matchInstruction(instruction);
+	
+	if(instruction === null) return null;
+
+	type = instruction[0];
+	parts = instruction[1];
+
+	// Step 2: Parse each part
+	if (type === "i-type-dec"){
+		if (parts[4] > 65535) { return null; }
+		binary = instructions[parts[1].toUpperCase()] << 26 | 
+			(getRegisterId(parts[2], false) << 21) | 
+			(getRegisterId(parts[3], false) << 16) | 
+			parts[4];
+	} else if (type === "i-type-hex"){
+		if (parseInt(parts[4], 16) > 65535) { return null; }
+		binary = instructions[parts[1].toUpperCase()] << 26 | 
+			(getRegisterId(parts[2], false) << 21) | 
+			(getRegisterId(parts[3], false) << 16) | 
+			parseInt(parts[4], 16);
+	} else if (type === "i-type-char"){
+		if (parts[4].charCodeAt(1) > 65535) { return null; }
+		binary = instructions[parts[1].toUpperCase()] << 26 | 
+			(getRegisterId(parts[2], false) << 21) | 
+			(getRegisterId(parts[3], false) << 16) | 
+			parts[4].charCodeAt(1);
+	}
+
+	// Step 4: Return number
+	return [label, binary];
 }
 
-function labelExists(label){
-    return labelDataExists(label) || labelTextExists(label);
+/*
+ * Match an instruction against a regex
+ * instruction: instruction to match all regexes against
+ * returns: [instruction type, instruction split in parts]
+ */
+function matchInstruction(instruction){
+	var keys = Object.keys(regex);
+	for (var i = 0; i < keys.length; i++) {
+		parts = regex[keys[i]].exec(instruction);
+		if (parts !== null) {
+			return [keys[i], parts];
+		}
+	}
+	return null;
 }
 
-//Checks that the string is ASCII
-function isASCII(string){
-    for (var i = 0; i < string.length; i++) {
-        if(string.charCodeAt(i) > 128){
-            return false;
-        }
-    }
-    return true;
-}
-
-function isReserved(word){
-    return operations[word] !== undefined;
-}
-
-function checkLabel(label){
-    if(isReserved(label) || labelExists(label)){
-        return false;
-    }
-    return true;
-}
-
-//Returns the addressing type.
-//Returns: -1 if it's not recognized, 0 for hex, 1 for value($reg), 2 for label($reg), 3 for label
-/*function checkDir(dir){
-    if(isHex(dir)){
-        dir = dir.replace("0x", "");
-        return ((hexToInt(10000000) <= hexToInt(dir)) && (hexToInt(dir) <= hexToInt(dataEnd))) ? 0 : -1;
-    } else if(dir.indexOf("(") !== -1) {
-        var reg = insReg(dir.substring(dir.indexOf("$"), dir.length-1));
-        if(dir.match(/\B\(\$..\)/g) !== null){
-            return 1;
-        }
-        var value = parseInt(dir);
-        if(value === null || value === undefined || isNaN(value)){
-            value = false;
-            var label = dir.substring(0, dir.indexOf("("));
-            for (var i = 0; i < datalabels.length; i++) {
-                if(datalabels[i][0] === label){
-                    value = true;
-                }
-            }
-            return (value && reg) ? 2 : -1;
-        } else {
-            return (typeof value === 'number' && reg) ? 1 : -1;
-        }
-
-    } else {
-        for (var i = 0; i < datalabels.length; i++) {
-            if(datalabels[i][0] === dir){
-                return 3;
-            }
-        }
-        return -1;
-    }
-}*/
-
-function checkDir(dir){
-    var result;
-    if(isHex(dir)){
-        dir = dir.replace("0x", "");
-        return ((hexToInt(10000000) <= hexToInt(dir)) && (hexToInt(dir) <= hexToInt(dataEnd))) ? 0 : -1;
-    } else if (dir.indexOf("(") === 0){
-        result = 1;
-    } else if (dir.indexOf("(") !== -1) {
-        if(!insReg(dir.substring(dir.indexOf("$"), dir.length-1))){
-            return -1;
-        };
-        var value = dir.substring(0, dir.indexOf("("));
-        if(/^([0-9]{1,})$/.test(value)){
-            result = 1;
-        } else if(labelExists(value)) {
-            result = 2;
-        } else {
-            return -1;
-        }
-    } else {
-        if(labelDataExists(dir)){
-            result = 3;
-        } else if(labelTextExists(dir)) {
-            result = 3;
-        } else {
-            result = -1;
-        }
-    }
-
-    return result;
-}
-
-//Returns the address.
-//Returns: -1 if it's not recognized, 0 for hex, 1 for value($reg), 2 for label($reg), 3 for label
-function getDir(dir){
-    var result = [0, ""];
-    if(isHex(dir)){
-        dir = dir.replace("0x", "");
-        return ((hexToInt(10000000) <= hexToInt(dir)) && (hexToInt(dir) <= hexToInt(dataEnd))) ? dir : -1;
-    } else if (dir.indexOf("(") === 0){
-        result = [0, dir.substring(dir.indexOf("$"), dir.length-1)];
-    } else if (dir.indexOf("(") !== -1) {
-        var reg = insReg(dir.substring(dir.indexOf("$"), dir.length-1));
-        result[1] = dir.substring(dir.indexOf("$"), dir.length-1);
-        var value = dir.substring(0, dir.indexOf("("));
-        if(/^([0-9]{1,})$/.test(value)){
-            result[0] = (isNaN(parseInt(value))) ? 0 : parseInt(value);
-        } else if(labelExists(value)) {
-            result[0] = value;
-        } else {
-            return -1;
-        }
-    } else {
-        if(labelDataExists(dir)){
-            result = dir;
-        } else if(labelTextExists(dir)) {
-            result = dir;
-        } else {
-            result = -1;
-        }
-    }
-
-    return result;
-}
-
-//Parse .data instruction
-//Returns: 0 - Succesfully parsed, 1 - Unrecognized, 2 - Incorrect label, 3 - Unrecognized characters
-function parseData(line){
-    var i = 0;
-
-    //Get the components of the instruction
-    temp = splitter(line);
-    var label = temp[0];
-    var instruction = temp[1];
-
-    //Check the label and store it
-    if(label !== -1){
-        if(checkLabel(label)){
-            datalabels.push([label, dataEnd]);
-        } else {
-            return 2;
-        }
-    }
-
-    //Pass if .data
-    if(instruction[0] === ".data" || instruction[0] === ".globl"){
-        return 0;
-    }
-
-    //Get the functions that check the instruction
-    var check = directives[instruction[0]];
-
-    try{
-        return check(instruction[1]);
-    }catch(err){
-        return 1;
-    }
-}
-
-//Parse .text instruction.
-//Returns: 0 - Succesfully parsed, 1 - Unrecognized, 2 - Incorrect label
-function parseText(line){
-    var i = 0;
-
-    //Get the components of the instruction
-    temp = splitter(line);
-    var label = temp[0];
-    var instruction = temp[1];
-
-    //Check the label and store it
-    if(label !== -1){
-        if(checkLabel(label)){
-            textlabels.push([label, textEnd]);
-        } else {
-            return 2;
-        }
-    }
-
-    //Pass if .text
-    if(instruction[0] === ".text"){
-        return 0;
-    }
-
-    //Pass if instruction is syscall
-    if(instruction[0] === "syscall"){
-        memory.push(instruction, true);
-        return 0;
-    }
-
-    //Get the functions that check the instruction
-    var checks;
-    try{
-        checks = operations[instruction[0]].check;
-        for (i = 0; i < checks.length && checks !== undefined; i++) {
-            if(checks[i](instruction[i+1])){
-                success = true;
-            } else {
-                return 1;
-            }
-        }
-    } catch(e){
-        return 1;
-    }
-
-    memory.push(instruction, true);
-    return 0;
-}
-
-//Register index
-function getRegisterId(register){
-    for (var i = 0; i < registerid.length; i++) {
-        if(registerid[i][0] === register || registerid[i][1] === register){
-            return i;
-        }
-    }
-    return -1;
+//PADDING
+function pad(n, width, z) {
+  z = z || '0';
+  n = n + '';
+  return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
 }
