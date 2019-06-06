@@ -79,13 +79,13 @@ const instructions = {
 };
 
 const regex = {
-    "i-type-dec": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4}) ([0-9]{1,5}[^xX])/g,
-    "i-type-hex": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4}) (0[xX][0-9a-fA-F]{1,4})/g,
-    "i-type-char": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4}) ('.')/g,
-    //"r-type-shift": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4}) ([0-9]{1,5})/g,
-    "r-type-triple": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4})/g,
-    "r-type-double": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4})[^ 0-9a-zA-Z$]/g,
-    "r-type-single": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4})[^ 0-9a-zA-Z$]/g
+    "i-type-hex": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4}) (0[xX][0-9a-fA-F]{1,4})/,
+    "i-type-dec": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4}) ([0-9]{1,5})/,
+    "i-type-char": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4}) ('.')/,
+    //"r-type-shift": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4}) ([0-9]{1,5})/,
+    "r-type-triple": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4})/,
+    "r-type-double": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4})[^ 0-9a-zA-Z$]/,
+    "r-type-single": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4})[^ 0-9a-zA-Z$]/
 };
 
 /*
@@ -142,8 +142,6 @@ function parseInstr(instruction){
 
     var type = instruction[0];
     var parts = instruction[1];
-
-    console.log(parts);
 
     // Check if OP codes and instructions are valid
     var opcode;
@@ -228,6 +226,10 @@ function pad(n, width, z) {
 }
 
 console.log(pad((parseInstr("ADD $t0 $t0 $a0")[1] >>> 0).toString(2), 32, 0));
-console.log(pad((parseInstr("ADDI $t0 $t0 255")[1] >>> 0).toString(2), 32, 0));
+console.log(pad((parseInstr("ADDI $t0 $t0 0")[1] >>> 0).toString(2), 32, 0));
+console.log(pad((parseInstr("ADDI $t0 $t0 1")[1] >>> 0).toString(2), 32, 0));
+console.log(pad((parseInstr("ADDI $t0 $t0 5")[1] >>> 0).toString(2), 32, 0));
+console.log(pad((parseInstr("ADDI $t0 $t0 65535")[1] >>> 0).toString(2), 32, 0));
 console.log(pad((parseInstr("ADDI $t0 $t0 0xFF")[1] >>> 0).toString(2), 32, 0));
+console.log(pad((parseInstr("SRL $t0 $t0 5")[1] >>> 0).toString(2), 32, 0));
 console.log(pad((parseInstr("ADDI $t0 $t0 $a0")[1] >>> 0).toString(2), 32, 0));
