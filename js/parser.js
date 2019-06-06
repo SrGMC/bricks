@@ -129,6 +129,7 @@ function parseContents(){
 // TODO
 function parseInstr(instruction){
     var binary = 0;
+
     // Remove trailing whitespace and convert to uppercase
     instruction = instruction.replace(/^\s+|\s+$/g,'');
     instruction = instruction.toUpperCase();
@@ -142,6 +143,8 @@ function parseInstr(instruction){
     var type = instruction[0];
     var parts = instruction[1];
 
+    console.log(parts);
+
     // Check if OP codes and instructions are valid
     var opcode;
     var ins;
@@ -150,11 +153,9 @@ function parseInstr(instruction){
     } else if (type.includes("r-type")) {
         opcode = instructions["r-type"][parts[1]];
     }
-
     if(opcode === undefined) throw "Invalid instruction";
 
-    // Parse types
-    if (type.includes("i-type")){
+    if (type.includes("i-type")){ // I-Type instructions
         var immediate = 0; 
         switch (type){
             case "i-type-dec":  immediate = parts[4]; break;
@@ -164,39 +165,34 @@ function parseInstr(instruction){
         if (immediate > 65535) throw "Invalid instruction";
 
         binary = opcode << 26 | 
-            (getRegisterId(parts[2], false) << 21) | 
-            (getRegisterId(parts[3], false) << 16) | 
-            immediate;
-    } else if (type === "r-type-shift"){
+                (getRegisterId(parts[2], false) << 21) | 
+                (getRegisterId(parts[3], false) << 16) | 
+                immediate;
+
+    } else if (type === "r-type-shift"){  // R-Type shift instructions
         if (parts[4] > 31) { return null; }
-        ins = opcode;
 
-        binary = ins[0] << 26 | 
-            (getRegisterId(parts[2], false) << 16) | 
-            (getRegisterId(parts[3], false) << 11) | 
-            parts[4] << 6 |
-            ins[1];
-    } else if (type === "r-type-triple"){
-        ins = opcode;
+        binary = opcode[0] << 26 | 
+                (getRegisterId(parts[2], false) << 16) | 
+                (getRegisterId(parts[3], false) << 11) | 
+                parts[4] << 6 |
+                opcode[1];
 
-        binary = ins[0] << 26 | 
-            (getRegisterId(parts[2], false) << 21) | 
-            (getRegisterId(parts[3], false) << 16) |
-            (getRegisterId(parts[4], false) << 11) |  
-            ins[1];
+    } else if (type === "r-type-triple"){ // R-Type instructions
+        binary = opcode[0] << 26 | 
+                (getRegisterId(parts[2], false) << 21) | 
+                (getRegisterId(parts[3], false) << 16) |
+                (getRegisterId(parts[4], false) << 11) |  
+                opcode[1];
     }  else if (type === "r-type-double"){
-        ins = opcode;
-
-        binary = ins[0] << 26 | 
-            (getRegisterId(parts[2], false) << 21) | 
-            (getRegisterId(parts[3], false) << 16) |
-            ins[1];
+        binary = opcode[0] << 26 | 
+                (getRegisterId(parts[2], false) << 21) | 
+                (getRegisterId(parts[3], false) << 16) |
+                opcode[1];
     }  else if (type === "r-type-single"){
-        ins = opcode;
-        
-        binary = ins[0] << 26 | 
-            (getRegisterId(parts[2], false) << 21) | 
-            ins[1];
+        binary = opcode[0] << 26 | 
+                (getRegisterId(parts[2], false) << 21) | 
+                opcode[1];
     }
 
     return [label, binary];
