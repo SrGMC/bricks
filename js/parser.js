@@ -42,20 +42,49 @@ const registers = {
 };
 
 const instructions = {
-	"ADDI": 8,
-	"ADDIU": 9,
-	"SLTI": 10,
-	"SLTIU": 11,
-	"ANDI": 12,
-	"ORI": 13,
-	"XORI": 14,
-	"LUI": 15
+	// R-Type
+	"SLL":   [0, 0],
+	"SRL":   [0, 2],
+	"SRA":   [0, 3],
+	"ADD":   [0, 32],
+	"ADDU":  [0, 33],
+	"AND":   [0, 34],
+	"DIV":   [0, 26],
+	"DIVU":  [0, 27],
+	"JR":    [0, 8],
+	"MFHI":  [0, 16],
+	"MTHI":  [0, 17],
+	"MFLO":  [0, 18],
+	"MTLO":  [0, 19],
+	"MULT":  [0, 24],
+	"MULTU": [0, 25],
+	"NOR":   [0, 39],
+	"XOR":   [0, 38],
+	"OR":    [0, 37],
+	"SLT":   [0, 42],
+	"SLTU":  [0, 43],
+	"SUB":   [0, 34],
+	"SUBU":  [0, 35],
+
+	//I-type
+	"ADDI":   8,
+	"ADDIU":  9,
+	"SLTI":   10,
+	"SLTIU":  11,
+	"ANDI":   12,
+	"ORI":    13,
+	"XORI":   14,
+	"LUI":    15
 };
 
 const regex = {
-	"i-type-dec": /([a-zA-Z]{2,7}) (\$.{2,4}) (\$.{2,4}) ([0-9]{1,5})/g,
-	"i-type-hex": /([a-zA-Z]{2,7}) (\$.{2,4}) (\$.{2,4}) (0x[0-9a-fA-F]{1,4})/g,
-	"i-type-char": /([a-zA-Z]{2,7}) (\$.{2,4}) (\$.{2,4}) ('.')/g
+	"i-type-dec": /([a-zA-Z]{2,7}) (\$\w{2,4}) (\$\w{2,4}) ([0-9]{1,5})/g,
+	"i-type-hex": /([a-zA-Z]{2,7}) (\$\w{2,4}) (\$\w{2,4}) (0x[0-9a-fA-F]{1,4})/g,
+	"i-type-char": /([a-zA-Z]{2,7}) (\$\w{2,4}) (\$\w{2,4}) ('.')/g,
+	//"r-type-shift": /([a-zA-Z]{2,7}) (\$\w{2,4}) (\$\w{2,4}) ([0-9]{1,5})/g,
+	"r-type-triple": /([a-zA-Z]{2,7}) (\$\w{2,4}) (\$\w{2,4}) (\$\w{2,4})/g,
+	"r-type-double": /([a-zA-Z]{2,7}) (\$\w{2,4}) (\$\w{2,4})[^ 0-9a-zA-Z$]/g,
+	"r-type-single": /([a-zA-Z]{2,7}) (\$\w{2,4})[^ 0-9a-zA-Z$]/g
 };
 
 /*
@@ -67,7 +96,7 @@ function getRegisterMnemonic(i){
 	if (typeof(i) === 'string'){
 		i = i.replace("$", "");
 	}
-	return registers[i];
+	return registers[i].toUpperCase();
 }
 
 /*
@@ -80,7 +109,8 @@ function getRegisterId(register, dollarSign){
 	var keys = Object.keys(registers);
 	for (var i = keys.length - 1; i >= 0; i--) {
 		var key = keys[i];
-		if(registers[key] === register || ("$" + keys[i]) === "register"){
+		if(registers[key].toUpperCase() === register.toUpperCase() || 
+		  ("$" + keys[i]).toUpperCase() === register.toUpperCase()){
 			return dollarSign ? "$" + key : key;
 		}
 	}
@@ -98,11 +128,12 @@ function parseInstr(instruction){
 	// Step 1: Split instruction in parts
 	// Remove trailing whitespace
 	instruction = instruction.replace(/^\s+|\s+$/g,'');
+	instruction = instruction.toUpperCase();
 
 	// Labels           /[a-zA-Z]+:/g
-	// I-Type with dec  /([a-zA-Z]{2,7}) (\$.{2,4}) (\$.{2,4}) ([0-9]{1,5})/g
-	// I-Type with hex  /([a-zA-Z]{2,7}) (\$.{2,4}) (\$.{2,4}) (0x[0-9a-fA-F]{1,4})/g
-	// I-Type with char /([a-zA-Z]{2,7}) (\$.{2,4}) (\$.{2,4}) ('.')/g
+	// I-Type with dec  /([a-zA-Z]{2,7}) (\$\w{2,4}) (\$\w{2,4}) ([0-9]{1,5})/g
+	// I-Type with hex  /([a-zA-Z]{2,7}) (\$\w{2,4}) (\$\w{2,4}) (0x[0-9a-fA-F]{1,4})/g
+	// I-Type with char /([a-zA-Z]{2,7}) (\$\w{2,4}) (\$\w{2,4}) ('.')/g
 	label = /[a-zA-Z]+:/g.exec(instruction);
 	instruction = matchInstruction(instruction);
 	
@@ -114,22 +145,48 @@ function parseInstr(instruction){
 	// Step 2: Parse each part
 	if (type === "i-type-dec"){
 		if (parts[4] > 65535) { return null; }
-		binary = instructions[parts[1].toUpperCase()] << 26 | 
+		binary = instructions[parts[1]] << 26 | 
 			(getRegisterId(parts[2], false) << 21) | 
 			(getRegisterId(parts[3], false) << 16) | 
 			parts[4];
 	} else if (type === "i-type-hex"){
 		if (parseInt(parts[4], 16) > 65535) { return null; }
-		binary = instructions[parts[1].toUpperCase()] << 26 | 
+		binary = instructions[parts[1]] << 26 | 
 			(getRegisterId(parts[2], false) << 21) | 
 			(getRegisterId(parts[3], false) << 16) | 
 			parseInt(parts[4], 16);
 	} else if (type === "i-type-char"){
 		if (parts[4].charCodeAt(1) > 65535) { return null; }
-		binary = instructions[parts[1].toUpperCase()] << 26 | 
+		binary = instructions[parts[1]] << 26 | 
 			(getRegisterId(parts[2], false) << 21) | 
 			(getRegisterId(parts[3], false) << 16) | 
 			parts[4].charCodeAt(1);
+	} else if (type === "r-type-shift"){
+		if (parts[4] > 31) { return null; }
+		ins = instructions[parts[1]];
+		binary = ins[0] << 26 | 
+			(getRegisterId(parts[2], false) << 16) | 
+			(getRegisterId(parts[3], false) << 11) | 
+			parts[4] << 6 |
+			ins[1];
+	} else if (type === "r-type-triple"){
+		ins = instructions[parts[1]];
+		binary = ins[0] << 26 | 
+			(getRegisterId(parts[2], false) << 21) | 
+			(getRegisterId(parts[3], false) << 16) |
+			(getRegisterId(parts[4], false) << 11) |  
+			ins[1];
+	}  else if (type === "r-type-double"){
+		ins = instructions[parts[1]];
+		binary = ins[0] << 26 | 
+			(getRegisterId(parts[2], false) << 21) | 
+			(getRegisterId(parts[3], false) << 16) |
+			ins[1];
+	}  else if (type === "r-type-single"){
+		ins = instructions[parts[1]];
+		binary = ins[0] << 26 | 
+			(getRegisterId(parts[2], false) << 21) | 
+			ins[1];
 	}
 
 	// Step 4: Return number
@@ -142,6 +199,12 @@ function parseInstr(instruction){
  * returns: [instruction type, instruction split in parts]
  */
 function matchInstruction(instruction){
+	if (instruction.includes("SLL") || 
+		instruction.includes("SRL") || 
+		instruction.includes("SRA")) {
+
+		return ["r-type-shift", regex["i-type-dec"].exec(instruction)];
+	}
 	var keys = Object.keys(regex);
 	for (var i = 0; i < keys.length; i++) {
 		parts = regex[keys[i]].exec(instruction);
@@ -158,3 +221,5 @@ function pad(n, width, z) {
   n = n + '';
   return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
 }
+
+console.log(pad((parseInstr("srl $t0 $t0 5")[1] >>> 0).toString(2), 32, 0));
