@@ -1,8 +1,8 @@
 var registers = {
-    "PC": 0;
-    "IR": [];
-    "HI": 0;
-    "LO": 0;
+    "PC": 0,
+    "IR": [],
+    "HI": 0,
+    "LO": 0,
      0: 0,  1: 0,  2: 0,  3: 0, 
      4: 0,  5: 0,  6: 0,  7: 0, 
      8: 0,  9: 0, 10: 0, 11: 0, 
@@ -24,19 +24,26 @@ const regName = [
     "$gp", "$sp", "$fp", "$ra"
 ];
 
-var instructions {
-	"ADD": {
-		"parse": parseRTypeTriple,
-		"exec": function(arg) {
-			registers[arg[0]] = registers[arg[1]] + registers[arg[2]];
-		}
-	},
-	"ADDI": {
-		"parse": null,
-		"exec": function(arg) {
-			registers[arg[0]] = registers[arg[1]] + arg[2];
-		}
-	}
+var instructions = {
+    "ADD": {
+        "parse": parseRTypeTriple,
+        "run": function(arg) {
+            registers[arg[0]] = registers[arg[1]] + registers[arg[2]];
+        }
+    },
+    "ADDI": {
+        "parse": parseIType,
+        "exec": function(arg) {
+            var imm;
+            switch (arg[3]) {
+                case "hex": imm = parseInt(arg[2]); break;
+                case "dec": imm = arg[2]; break;
+                case "char":  imm = arg[2].charCodeAt(0); break;
+            }
+
+            registers[arg[0]] = registers[arg[1]] + imm;
+        }
+    }
 }
 
 /*
@@ -47,12 +54,14 @@ var instructions {
 function clean(instruction){
     // Remove commas and trailing whitespace, then convert to uppercase
     instruction = instruction.replace(/^\s+|\s+$/g,'');
-    instruction = instruction.replace(',', '');
+    instruction = instruction.replace(/,/g, '');
     instruction = instruction.toUpperCase();
 
     // Get comments and remove them
-    var comment = instruction.match(/(#.+)/g)[0];
-    instruction = instruction.replace(comment, '');
+    var comment = instruction.match(/(#.+)/g);
+    if (comment !== null) {
+        instruction = instruction.replace(comment[0], '');
+    }
 
     return {"label": null, "comment": comment, "instruction": instruction}
 }
@@ -62,9 +71,9 @@ function clean(instruction){
  */
 
 function getOp(instruction) {
-	var op = instruction.match(/([a-zA-Z]{2,7})/g);
-	if (op === null) { throw "Invalid instruction" };
-	return op[0];
+    var op = instruction.match(/([a-zA-Z]{2,7})/g);
+    if (op === null) { throw "Invalid instruction" };
+    return op[0];
 }
 
 /*
@@ -73,56 +82,80 @@ function getOp(instruction) {
  * returns: register index
  */
 function getRegisterIndex(reg){
-	reg = reg.replace('$', '');
-	for (var i = 0; i < regName.length; i++) {
-		if (regName[i] === reg) {
-			return i;
-		}
-	}
+    for (var i = 0; i < regName.length; i++) {
+        if (regName[i].toUpperCase() === reg.toUpperCase()) {
+            return i;
+        }
+    }
     return null;
 }
 
 function parseRTypeTriple(instruction) {
-	var res = /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4})/g.exec(instruction);
-	if (res === null) throw "Invalid instruction";
-	return [getRegisterIndex(res[2]), getRegisterIndex(res[3]), getRegisterIndex(res[4])]
+    var res = /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4})/g.exec(instruction);
+    if (res === null) throw "Invalid instruction";
+    return [getRegisterIndex(res[2]), getRegisterIndex(res[3]), getRegisterIndex(res[4])]
+}
+
+function parseIType(instruction) {
+    var regex = {
+        "hex": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4}) (0[xX][0-9a-fA-F]{1,4})/,
+        "dec": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4}) ([0-9]{1,5})/,
+        "char": /([a-zA-Z]{2,7}) (\$[a-zA-Z0-9]{2,4}) (\$[a-zA-Z0-9]{2,4}) ('.')/
+    }
+
+    var res;
+    var type;
+    var k = Object.keys(regex);
+    for (var i = 0; i < k.length; i++) {
+        res = regex[k[i]].exec(instruction);
+        if (res !== null) {
+            type = k[i];
+            break;
+        }
+    }
+
+    if (res === null) throw "Invalid instruction";
+
+    return [getRegisterIndex(res[2]), getRegisterIndex(res[3]), res[4], type]
 }
 
 function parse(instruction) {
-	try {
-		instruction = clean(instruction);
-		op = getOp(instruction);
-	catch (e) {
-		return false;
-	}
+    var op;
+    try {
+        instruction = clean(instruction).instruction;
+        op = getOp(instruction);
+    } catch (e) {
+        return false;
+    }
 
-	if (instructions[op] === undefined) { throw "Unknown instruction" }
-	
-	try {
-		instructions[op].parse();
-	catch (e) {
-		return false;
-	}
+    if (instructions[op] === undefined) { throw "Unknown instruction" }
+    
+    try {
+        instructions[op].parse(instruction);
+    } catch (e) {
+        return false;
+    }
 
-	return true;	
+    return true;    
 }
 
 function run(instruction) {
-	try {
-		instruction = clean(instruction);
-		op = getOp(instruction);
-	catch (e) {
-		return false;
-	}
+    var op;
+    try {
+        instruction = clean(instruction).instruction;
+        op = getOp(instruction);
+    } catch (e) {
+        return false;
+    }
 
-	if (instructions[op] === undefined) { throw "Unknown instruction" }
-	
-	try {
-		var arg = instructions[op].parse();
-		instructions[op].exec(arg);
-	catch (e) {
-		return false;
-	}
+    if (instructions[op] === undefined) { throw "Unknown instruction" }
+    
+    try {
+        var arg = instructions[op].parse(instruction);
+        instructions[op].exec(arg);
+    } catch (e) {
+        return false;
+    }
 
-	return true;
+    return true;  
 }
